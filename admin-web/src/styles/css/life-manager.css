@@ -1,0 +1,547 @@
+.life-page {
+  min-height: 100%;
+  color: #182033;
+}
+
+.life-page * {
+  letter-spacing: 0;
+}
+
+.life-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.life-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 132px;
+  padding: 26px 28px;
+  border: 1px solid rgba(120, 109, 255, 0.1);
+  border-radius: 8px;
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.96), rgba(250, 248, 255, 0.9)),
+    radial-gradient(circle at 86% 18%, rgba(255, 197, 109, 0.18), transparent 26%),
+    radial-gradient(circle at 64% 80%, rgba(66, 211, 190, 0.12), transparent 24%);
+  box-shadow: 0 16px 44px rgba(92, 76, 160, 0.08);
+}
+
+.life-hero-title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #10182f;
+}
+
+.life-hero-subtitle {
+  max-width: 720px;
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #6c7284;
+}
+
+.life-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.life-weather-chip {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid rgba(120, 109, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 28px rgba(82, 92, 140, 0.08);
+  color: #495166;
+}
+
+.life-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.life-span-3 {
+  grid-column: span 3;
+}
+
+.life-span-4 {
+  grid-column: span 4;
+}
+
+.life-span-5 {
+  grid-column: span 5;
+}
+
+.life-span-6 {
+  grid-column: span 6;
+}
+
+.life-span-7 {
+  grid-column: span 7;
+}
+
+.life-span-8 {
+  grid-column: span 8;
+}
+
+.life-span-12 {
+  grid-column: span 12;
+}
+
+.life-card {
+  overflow: hidden;
+  height: 100%;
+  padding: 20px;
+  border: 1px solid rgba(121, 111, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 42px rgba(80, 84, 124, 0.08);
+}
+
+.life-card-soft {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(249, 248, 255, 0.92)),
+    radial-gradient(circle at 92% 16%, rgba(120, 109, 255, 0.12), transparent 28%);
+}
+
+.life-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.life-card-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+  font-weight: 760;
+  color: #17203a;
+}
+
+.life-card-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #8b91a4;
+}
+
+.life-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 8px;
+  background: rgba(120, 109, 255, 0.12);
+  color: #7266ff;
+}
+
+.life-icon.teal {
+  background: rgba(20, 184, 166, 0.12);
+  color: #0f9f90;
+}
+
+.life-icon.amber {
+  background: rgba(245, 158, 11, 0.13);
+  color: #d88906;
+}
+
+.life-icon.rose {
+  background: rgba(244, 96, 135, 0.12);
+  color: #e84272;
+}
+
+.life-icon.blue {
+  background: rgba(57, 139, 255, 0.12);
+  color: #347be8;
+}
+
+.life-link {
+  color: #7767ff;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.life-stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.life-stat {
+  padding: 14px 10px;
+  border-radius: 8px;
+  background: #f8f8fd;
+  text-align: center;
+}
+
+.life-stat strong {
+  display: block;
+  color: #10182f;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.life-stat span {
+  display: block;
+  margin-top: 8px;
+  color: #7b8195;
+  font-size: 12px;
+}
+
+.life-list {
+  display: grid;
+  gap: 12px;
+}
+
+.life-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.life-list-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.life-list-title {
+  overflow: hidden;
+  color: #202942;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-list-meta {
+  margin-top: 3px;
+  color: #8b91a4;
+  font-size: 12px;
+}
+
+.life-time {
+  color: #5b6277;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.life-check {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #cfd3df;
+  border-radius: 6px;
+  color: #fff;
+}
+
+.life-check.done {
+  border-color: #7568ff;
+  background: #7568ff;
+}
+
+.life-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 8px;
+  background: rgba(120, 109, 255, 0.1);
+  color: #6658ef;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.life-tag.teal {
+  background: rgba(20, 184, 166, 0.12);
+  color: #0b9488;
+}
+
+.life-tag.amber {
+  background: rgba(245, 158, 11, 0.13);
+  color: #c77904;
+}
+
+.life-tag.rose {
+  background: rgba(244, 96, 135, 0.12);
+  color: #dd3c70;
+}
+
+.life-tag.blue {
+  background: rgba(57, 139, 255, 0.12);
+  color: #2f74df;
+}
+
+.life-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ececf5;
+}
+
+.life-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7568ff, #45c6b3);
+}
+
+.life-project-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 170px;
+  padding: 18px;
+  border: 1px solid rgba(121, 111, 255, 0.08);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 36px rgba(80, 84, 124, 0.07);
+}
+
+.life-project-card:before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(120, 109, 255, 0.08), transparent 50%);
+  pointer-events: none;
+}
+
+.life-project-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7668ff, #42c6b5);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.life-project-title {
+  margin: 12px 0 4px;
+  color: #17203a;
+  font-size: 18px;
+  font-weight: 780;
+}
+
+.life-project-desc {
+  min-height: 40px;
+  margin: 0;
+  color: #73798d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.life-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.life-mini-cell {
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8f8fd;
+}
+
+.life-mini-cell span {
+  display: block;
+  color: #8b91a4;
+  font-size: 12px;
+}
+
+.life-mini-cell strong {
+  display: block;
+  margin-top: 4px;
+  color: #202942;
+  font-size: 14px;
+}
+
+.life-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.life-tab {
+  padding: 9px 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #6b7285;
+  font-weight: 650;
+  box-shadow: inset 0 0 0 1px rgba(121, 111, 255, 0.08);
+}
+
+.life-tab.active {
+  background: #7568ff;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(117, 104, 255, 0.25);
+}
+
+.life-timeline {
+  position: relative;
+  display: grid;
+  gap: 14px;
+}
+
+.life-timeline-item {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.life-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #7568ff;
+  box-shadow: 0 0 0 4px rgba(117, 104, 255, 0.12);
+}
+
+.life-cover-banner {
+  position: relative;
+  overflow: hidden;
+  min-height: 190px;
+  padding: 24px;
+  border-radius: 8px;
+  background:
+    linear-gradient(120deg, rgba(29, 35, 60, 0.75), rgba(57, 68, 116, 0.36)),
+    linear-gradient(135deg, #9a8cff, #79dccf 45%, #ffd391);
+  color: #fff;
+  box-shadow: 0 18px 44px rgba(65, 69, 120, 0.16);
+}
+
+.life-cover-banner.travel {
+  background:
+    linear-gradient(120deg, rgba(31, 55, 86, 0.78), rgba(72, 118, 165, 0.38)),
+    linear-gradient(135deg, #6eb8ff, #ffc7db 46%, #85dfba);
+}
+
+.life-cover-banner h1 {
+  margin: 16px 0 8px;
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+.life-cover-banner p {
+  max-width: 680px;
+  margin: 0;
+  line-height: 1.8;
+  opacity: 0.9;
+}
+
+.life-cover-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.life-panel-list {
+  display: grid;
+  gap: 10px;
+}
+
+.life-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f8f8fd;
+}
+
+.life-setting-row strong {
+  display: block;
+  color: #202942;
+}
+
+.life-setting-row span {
+  display: block;
+  margin-top: 3px;
+  color: #8b91a4;
+  font-size: 12px;
+}
+
+.life-action-bar {
+  position: sticky;
+  z-index: 2;
+  bottom: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(121, 111, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 18px 42px rgba(80, 84, 124, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+@media (max-width: 1200px) {
+  .life-span-3,
+  .life-span-4,
+  .life-span-5,
+  .life-span-6,
+  .life-span-7,
+  .life-span-8 {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 760px) {
+  .life-hero {
+    padding: 22px;
+  }
+
+  .life-weather-chip {
+    position: static;
+    width: fit-content;
+    margin-top: 18px;
+  }
+
+  .life-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .life-span-3,
+  .life-span-4,
+  .life-span-5,
+  .life-span-6,
+  .life-span-7,
+  .life-span-8,
+  .life-span-12 {
+    grid-column: span 1;
+  }
+
+  .life-stat-row,
+  .life-mini-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
