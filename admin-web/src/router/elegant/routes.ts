@@ -84,7 +84,10 @@ export const generatedRoutes: GeneratedRoute[] = [
     path: '/home',
     component: 'layout.blank$view.home',
     meta: {
-      title: 'home',
+      title: 'Life Manager',
+      icon: 'material-symbols:dashboard-customize-outline-rounded',
+      order: 10,
+      hideInMenu: true,
       i18nKey: 'route.home'
     }
   },
@@ -106,7 +109,10 @@ export const generatedRoutes: GeneratedRoute[] = [
     path: '/infinity-nikki',
     component: 'layout.blank$view.infinity-nikki',
     meta: {
-      title: 'infinity-nikki',
+      title: '无限暖暖',
+      icon: 'material-symbols:stadia-controller-outline-rounded',
+      order: 12,
+      hideInMenu: true,
       i18nKey: 'route.infinity-nikki'
     }
   },
@@ -115,7 +121,10 @@ export const generatedRoutes: GeneratedRoute[] = [
     path: '/infinity-nikki-manage',
     component: 'layout.blank$view.infinity-nikki-manage',
     meta: {
-      title: 'infinity-nikki-manage',
+      title: '无限暖暖管理',
+      icon: 'material-symbols:settings-outline-rounded',
+      hideInMenu: true,
+      activeMenu: 'infinity-nikki',
       i18nKey: 'route.infinity-nikki-manage'
     }
   },
@@ -124,7 +133,10 @@ export const generatedRoutes: GeneratedRoute[] = [
     path: '/japan-travel',
     component: 'layout.blank$view.japan-travel',
     meta: {
-      title: 'japan-travel',
+      title: '日本旅行 2026',
+      icon: 'material-symbols:flight-takeoff-rounded',
+      order: 13,
+      hideInMenu: true,
       i18nKey: 'route.japan-travel'
     }
   },
@@ -133,7 +145,10 @@ export const generatedRoutes: GeneratedRoute[] = [
     path: '/japan-travel-manage',
     component: 'layout.blank$view.japan-travel-manage',
     meta: {
-      title: 'japan-travel-manage',
+      title: '日本旅行管理',
+      icon: 'material-symbols:travel-explore-rounded',
+      hideInMenu: true,
+      activeMenu: 'japan-travel',
       i18nKey: 'route.japan-travel-manage'
     }
   },
@@ -201,7 +216,10 @@ export const generatedRoutes: GeneratedRoute[] = [
     path: '/projects',
     component: 'layout.blank$view.projects',
     meta: {
-      title: 'projects',
+      title: '项目管理',
+      icon: 'material-symbols:folder-outline-rounded',
+      order: 11,
+      hideInMenu: true,
       i18nKey: 'route.projects'
     }
   },

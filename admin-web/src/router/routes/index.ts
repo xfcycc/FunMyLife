@@ -30,66 +30,71 @@ export function createStaticRoutes() {
   };
 }
 
-const dynamicConstantRoutes: ElegantRoute[] = [
+const dynamicConstantRoutes = [
   {
     name: 'home',
-    path: '/home',
+    path: '/life',
     component: 'layout.blank$view.home',
     meta: {
-      title: 'home',
-      i18nKey: 'route.home',
-      icon: 'mdi:monitor-dashboard',
-      order: -1
+      title: 'Life Manager',
+      icon: 'material-symbols:dashboard-customize-outline-rounded',
+      order: 10,
+      hideInMenu: true
     }
   },
   {
     name: 'projects',
-    path: '/projects',
+    path: '/life/projects',
     component: 'layout.blank$view.projects',
     meta: {
       title: '项目管理',
-      icon: 'material-symbols:dashboard-customize-outline-rounded',
-      order: 2
+      icon: 'material-symbols:folder-outline-rounded',
+      order: 11,
+      hideInMenu: true
     }
   },
   {
     name: 'infinity-nikki',
-    path: '/infinity-nikki',
+    path: '/life/project/infinity-nikki',
     component: 'layout.blank$view.infinity-nikki',
     meta: {
       title: '无限暖暖',
       icon: 'material-symbols:stadia-controller-outline-rounded',
-      order: 3
+      order: 12,
+      hideInMenu: true
     }
   },
   {
     name: 'infinity-nikki-manage',
-    path: '/infinity-nikki-manage',
+    path: '/life/project/infinity-nikki/manage',
     component: 'layout.blank$view.infinity-nikki-manage',
     meta: {
       title: '无限暖暖管理',
       icon: 'material-symbols:settings-outline-rounded',
-      hideInMenu: true
+      hideInMenu: true,
+      activeMenu: 'infinity-nikki'
     }
   },
   {
     name: 'japan-travel',
-    path: '/japan-travel',
+    path: '/life/project/japan-travel',
     component: 'layout.blank$view.japan-travel',
     meta: {
       title: '日本旅行 2026',
       icon: 'material-symbols:flight-takeoff-rounded',
-      order: 4
+      order: 13,
+      hideInMenu: true
     }
   },
   {
     name: 'japan-travel-manage',
-    path: '/japan-travel-manage',
+    path: '/life/project/japan-travel/manage',
     component: 'layout.blank$view.japan-travel-manage',
     meta: {
       title: '日本旅行管理',
       icon: 'material-symbols:travel-explore-rounded',
-      hideInMenu: true
+      hideInMenu: true,
+      activeMenu: 'japan-travel'
     }
   },
   {
@@ -174,7 +179,7 @@ const dynamicConstantRoutes: ElegantRoute[] = [
       hideInMenu: true
     }
   }
-];
+] as unknown as ElegantRoute[];
 
 /** create routes when the auth route mode is static */
 export function createDynamicRoutes() {
