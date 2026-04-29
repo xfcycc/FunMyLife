@@ -1,98 +1,256 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
+import LifeModal from '@/components/life-manager/LifeModal.vue';
+import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
+import { useLifeToast } from '@/hooks/business/lifeFeedback';
 
 defineOptions({
   name: 'Home'
 });
 
-const todos = [
-  ['完成项目文档初稿', '工作', '10:00'],
-  ['健身 30 分钟', '生活', '18:30'],
-  ['阅读《深度工作》第 3 章', '学习', '20:00'],
-  ['整理一周开销', '生活', '21:00']
-];
+interface TodoItem {
+  title: string;
+  tag: string;
+  time: string;
+  done: boolean;
+}
+
+const { toasts, removeToast, success, info, warning } = useLifeToast();
+
+const summaryRange = ref<'today' | 'week'>('today');
+const weatherMode = ref<'today' | 'trip'>('today');
+const projectFilter = ref<'全部' | '游戏' | '旅行' | '学习'>('全部');
+const aiIndex = ref(0);
+const showTodoModal = ref(false);
+const showEventModal = ref(false);
+const newTodoTitle = ref('');
+const newTodoTag = ref('生活');
+const newTodoTime = ref('21:30');
+
+const todos = ref<TodoItem[]>([
+  { title: '完成项目文档初稿', tag: '工作', time: '10:00', done: true },
+  { title: '健身 30 分钟', tag: '生活', time: '18:30', done: false },
+  { title: '阅读《深度工作》第 3 章', tag: '学习', time: '20:00', done: false },
+  { title: '整理一周开销', tag: '生活', time: '21:00', done: false }
+]);
 
 const expiring = [
   ['腾讯视频 VIP', '6月2日 还有 13 天', 'material-symbols:play-circle-outline-rounded'],
   ['ChatGPT Plus 会员', '6月5日 还有 16 天', 'material-symbols:all-inclusive-rounded'],
   ['域名 - xiamuyouran.com', '6月18日 还有 29 天', 'material-symbols:language-rounded'],
   ['平安百万医疗险', '6月25日 还有 36 天', 'material-symbols:health-and-safety-outline-rounded']
-];
+] as const;
 
-const projects = [
-  ['无限暖暖', '游戏', '今日任务 5/8', '待办 3', '倒计时 2', 'nikki'],
-  ['原神', '游戏', '今日任务 4/9', '待办 2', '倒计时 1', 'genshin'],
-  ['日本旅行 2026', '旅行', '待办 12', '行程 6', '倒计时 3', 'japan'],
-  ['OpenAI 学习计划', '学习', '本周目标 3/5', '待办 4', '笔记 7', 'openai']
-];
+const projectItems = ref([
+  { name: '无限暖暖', type: '游戏', summary: '今日任务 5/8', extraA: '待办 3', extraB: '倒计时 2', cover: 'nikki', pinned: true },
+  { name: '原神', type: '游戏', summary: '今日任务 4/9', extraA: '待办 2', extraB: '倒计时 1', cover: 'genshin', pinned: false },
+  { name: '日本旅行 2026', type: '旅行', summary: '待办 12', extraA: '行程 6', extraB: '倒计时 3', cover: 'japan', pinned: false },
+  { name: 'OpenAI 学习计划', type: '学习', summary: '本周目标 3/5', extraA: '待办 4', extraB: '笔记 7', cover: 'openai', pinned: false }
+]);
 
-const status = [
+const status = ref([
   ['AI 总结完成：日本旅行行前清单', '10:42'],
   ['文件上传完成：IMG_2024.jpg', '10:31'],
   ['提醒触发：腾讯视频 VIP 即将到期', '09:00'],
   ['数据同步完成', '08:20'],
   ['AI 总结完成：本周学习复盘', '昨天 22:15']
+]);
+
+const aiSuggestions = [
+  '你昨天的日记情绪较稳定，建议继续保持晨间记录。',
+  '日本旅行项目有 3 个待办即将开始，记得安排时间。',
+  '无限暖暖有活动提醒，别错过奖励。',
+  '本周学习计划只差 2 次打卡，今晚完成会很轻松。'
 ];
+
+const quickActions = [
+  ['添加待办', 'material-symbols:check-box-rounded'],
+  ['记录日记', 'material-symbols:article-outline-rounded'],
+  ['写笔记', 'material-symbols:edit-note-outline-rounded'],
+  ['上传图册', 'material-symbols:add-photo-alternate-outline-rounded'],
+  ['记账', 'material-symbols:history-rounded'],
+  ['搜索', 'material-symbols:search-rounded'],
+  ['导入数据', 'material-symbols:upload-file-outline-rounded'],
+  ['更多', 'material-symbols:more-horiz-rounded']
+] as const;
+
+const filteredProjects = computed(() => {
+  if (projectFilter.value === '全部') return projectItems.value;
+  return projectItems.value.filter(item => item.type === projectFilter.value);
+});
+
+const doneCount = computed(() => todos.value.filter(item => item.done).length);
+const todoCount = computed(() => todos.value.length - doneCount.value);
+const scheduleCount = computed(() => (summaryRange.value === 'today' ? 3 : 9));
+const pendingAlertCount = computed(() => (weatherMode.value === 'today' ? 1 : 2));
+const expiringCount = computed(() => expiring.length);
+const selectedSuggestion = computed(() => aiSuggestions[aiIndex.value]);
+const currentWeatherLabel = computed(() =>
+  weatherMode.value === 'today' ? '5月20日 周二' : '日本旅行模式 · 东京'
+);
+const currentWeatherValue = computed(() =>
+  weatherMode.value === 'today' ? '多云 18℃ - 25℃' : '晴 21℃ - 27℃'
+);
+
+function toggleTodo(index: number) {
+  const item = todos.value[index];
+  item.done = !item.done;
+  success(item.done ? '待办已完成' : '待办已恢复', item.title);
+}
+
+function openTodoModal() {
+  showTodoModal.value = true;
+}
+
+function createTodo() {
+  const title = newTodoTitle.value.trim();
+
+  if (!title) {
+    warning('请先输入待办', '标题不能为空');
+    return;
+  }
+
+  todos.value.unshift({
+    title,
+    tag: newTodoTag.value,
+    time: newTodoTime.value,
+    done: false
+  });
+
+  newTodoTitle.value = '';
+  newTodoTag.value = '生活';
+  newTodoTime.value = '21:30';
+  showTodoModal.value = false;
+  success('已添加待办', `${title} · ${newTodoTime.value}`);
+}
+
+function cycleSuggestion() {
+  aiIndex.value = (aiIndex.value + 1) % aiSuggestions.length;
+  info('AI 建议已刷新', `当前建议 ${aiIndex.value + 1}/${aiSuggestions.length}`);
+}
+
+function toggleProjectPin(name: string) {
+  const target = projectItems.value.find(item => item.name === name);
+  if (!target) return;
+  target.pinned = !target.pinned;
+  info(target.pinned ? '已置顶项目' : '已取消置顶', target.name);
+}
+
+function runQuickAction(label: string) {
+  if (label === '添加待办') {
+    openTodoModal();
+    return;
+  }
+
+  if (label === '记录日记') {
+    showEventModal.value = true;
+    return;
+  }
+
+  info('快捷入口演示', `${label} 交互已触发`);
+}
+
+function switchRange(range: 'today' | 'week') {
+  summaryRange.value = range;
+  info(range === 'today' ? '切回今日概览' : '已切换到本周视角');
+}
+
+function switchWeather() {
+  weatherMode.value = weatherMode.value === 'today' ? 'trip' : 'today';
+  info(weatherMode.value === 'today' ? '显示本地天气' : '切换到旅行天气卡片');
+}
+
+function setProjectFilter(filter: '全部' | '游戏' | '旅行' | '学习') {
+  projectFilter.value = filter;
+  info('项目筛选已切换', filter);
+}
+
+function addTimelineEvent() {
+  status.value.unshift(['手动记录：晚间复盘已加入时间线', '刚刚']);
+  showEventModal.value = false;
+  success('已加入实时状态', '晚间复盘事件已写入');
+}
 </script>
 
 <template>
   <LifeAppShell active="首页">
+    <LifeToastHost :items="toasts" @close="removeToast" />
+
     <header class="lm-topbar home-top">
       <div class="lm-title">
         <h1>上午好，夏目悠然 ☀️</h1>
         <p>新的一天，从有序开始</p>
       </div>
       <div class="lm-actions">
-        <div class="lm-pill weather-pill">
-          <span>5月20日 周二</span>
-          <strong>多云 18℃ - 25℃</strong>
-          <SvgIcon icon="material-symbols:partly-cloudy-day-rounded" />
-        </div>
-        <button class="lm-icon-btn"><SvgIcon icon="material-symbols:search-rounded" /></button>
-        <button class="lm-icon-btn dot"><SvgIcon icon="material-symbols:notifications-outline-rounded" /></button>
-        <button class="lm-purple-btn round-only"><SvgIcon icon="material-symbols:add-rounded" /></button>
+        <button class="lm-pill weather-pill" type="button" @click="switchWeather">
+          <span>{{ currentWeatherLabel }}</span>
+          <strong>{{ currentWeatherValue }}</strong>
+          <SvgIcon :icon="weatherMode === 'today' ? 'material-symbols:partly-cloudy-day-rounded' : 'material-symbols:luggage-rounded'" />
+        </button>
+        <button class="lm-icon-btn" type="button" @click="showEventModal = true"><SvgIcon icon="material-symbols:search-rounded" /></button>
+        <button class="lm-icon-btn dot" type="button" @click="showEventModal = true">
+          <SvgIcon icon="material-symbols:notifications-outline-rounded" />
+        </button>
+        <button class="lm-purple-btn round-only" type="button" @click="openTodoModal">
+          <SvgIcon icon="material-symbols:add-rounded" />
+        </button>
       </div>
     </header>
+
+    <section class="summary-switch">
+      <button :class="{ active: summaryRange === 'today' }" type="button" @click="switchRange('today')">今日</button>
+      <button :class="{ active: summaryRange === 'week' }" type="button" @click="switchRange('week')">本周</button>
+    </section>
 
     <section class="lm-grid home-summary">
       <article class="lm-card overview-card">
         <div class="lm-card-title">
           <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:calendar-month-rounded" /></span>今日概览</h2>
-          <button>更多 ›</button>
+          <button type="button" @click="switchRange(summaryRange === 'today' ? 'week' : 'today')">
+            {{ summaryRange === 'today' ? '切换本周' : '切换今日' }}
+          </button>
         </div>
         <div class="overview-numbers">
-          <div><strong>8</strong><span>待办事项</span></div>
-          <div><strong>3</strong><span>今日日程</span></div>
-          <div><strong>2</strong><span>即将到期</span></div>
-          <div><strong>1</strong><span>待处理提醒</span></div>
+          <div><strong>{{ todoCount }}</strong><span>待办事项</span></div>
+          <div><strong>{{ scheduleCount }}</strong><span>{{ summaryRange === 'today' ? '今日日程' : '本周日程' }}</span></div>
+          <div><strong>{{ expiringCount }}</strong><span>即将到期</span></div>
+          <div><strong>{{ pendingAlertCount }}</strong><span>待处理提醒</span></div>
         </div>
         <div class="soft-chart">
           <i></i><i></i><i></i><i></i><i></i>
         </div>
-        <p class="overview-note">保持节奏，你已经很棒了！ 💜</p>
+        <p class="overview-note">已完成 {{ doneCount }} 项，继续保持这个节奏就很好啦 💜</p>
       </article>
 
       <article class="lm-card todo-card">
         <div class="lm-card-title">
           <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:edit-calendar-outline-rounded" /></span>今日待办</h2>
-          <button>查看全部</button>
+          <button type="button" @click="openTodoModal">添加</button>
         </div>
         <div class="todo-list">
-          <div v-for="item in todos" :key="item[0]">
+          <button
+            v-for="(item, index) in todos"
+            :key="item.title + item.time"
+            class="todo-item"
+            :class="{ done: item.done }"
+            type="button"
+            @click="toggleTodo(index)"
+          >
             <span class="check"></span>
-            <strong>{{ item[0] }}</strong>
-            <em>{{ item[1] }}</em>
-            <time>{{ item[2] }}</time>
+            <strong>{{ item.title }}</strong>
+            <em>{{ item.tag }}</em>
+            <time>{{ item.time }}</time>
             <span class="circle"></span>
-          </div>
+          </button>
         </div>
-        <button class="add-todo">＋ 添加待办</button>
+        <button class="add-todo" type="button" @click="openTodoModal">＋ 添加待办</button>
       </article>
 
       <article class="lm-card expire-card">
         <div class="lm-card-title">
           <h2><span class="lm-mini-icon pink"><SvgIcon icon="material-symbols:event-upcoming-outline-rounded" /></span>即将到期（30 天内）</h2>
-          <button>查看全部</button>
+          <button type="button" @click="info('到期提醒', '这里可以继续下钻到完整列表')">查看全部</button>
         </div>
         <div class="expire-list">
           <div v-for="item in expiring" :key="item[0]">
@@ -105,17 +263,31 @@ const status = [
     </section>
 
     <section class="lm-card project-strip">
-      <div class="lm-card-title">
+      <div class="lm-card-title project-strip-head">
         <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:folder-outline-rounded" /></span>项目总览</h2>
+        <div class="project-filters">
+          <button
+            v-for="item in ['全部', '游戏', '旅行', '学习']"
+            :key="item"
+            :class="{ active: projectFilter === item }"
+            type="button"
+            @click="setProjectFilter(item as '全部' | '游戏' | '旅行' | '学习')"
+          >
+            {{ item }}
+          </button>
+        </div>
       </div>
       <div class="home-projects">
-        <article v-for="item in projects" :key="item[0]">
-          <div class="home-project-cover" :class="item[5]"></div>
-          <h3>{{ item[0] }} <span>{{ item[1] }}</span></h3>
+        <article v-for="item in filteredProjects" :key="item.name">
+          <button class="pin-btn" type="button" @click="toggleProjectPin(item.name)">
+            <SvgIcon :icon="item.pinned ? 'material-symbols:star-rounded' : 'material-symbols:star-outline-rounded'" />
+          </button>
+          <div class="home-project-cover" :class="item.cover"></div>
+          <h3>{{ item.name }} <span>{{ item.type }}</span></h3>
           <div class="home-project-meta">
-            <span>{{ item[2] }}</span>
-            <span>{{ item[3] }}</span>
-            <span>{{ item[4] }}</span>
+            <span>{{ item.summary }}</span>
+            <span>{{ item.extraA }}</span>
+            <span>{{ item.extraB }}</span>
           </div>
           <footer>版本更新 5月28日 <b>还有 8 天</b></footer>
         </article>
@@ -126,13 +298,14 @@ const status = [
       <article class="lm-card ai-card">
         <div class="lm-card-title">
           <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:auto-awesome-rounded" /></span>AI 今日建议</h2>
+          <button type="button" @click="cycleSuggestion">换一条</button>
         </div>
         <ul>
-          <li>你昨天的日记情绪较稳定，建议继续保持晨间记录。</li>
-          <li>日本旅行项目有 3 个待办即将开始，记得安排时间。</li>
-          <li>无限暖暖有活动提醒，别错过奖励。</li>
+          <li>{{ selectedSuggestion }}</li>
+          <li>如果今天只做一件事，优先完成最晚那条待办会更轻松。</li>
+          <li>睡前花 5 分钟收一下桌面，明早会更舒服。</li>
         </ul>
-        <button class="lm-plain-btn">查看完整建议 ›</button>
+        <button class="lm-plain-btn" type="button" @click="cycleSuggestion">查看完整建议 ›</button>
         <div class="lm-robot"></div>
       </article>
 
@@ -156,24 +329,19 @@ const status = [
           <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:verified-user-outline-rounded" /></span>快捷入口</h2>
         </div>
         <div class="quick-grid">
-          <button><SvgIcon icon="material-symbols:check-box-rounded" />添加待办</button>
-          <button><SvgIcon icon="material-symbols:article-outline-rounded" />记录日记</button>
-          <button><SvgIcon icon="material-symbols:edit-note-outline-rounded" />写笔记</button>
-          <button><SvgIcon icon="material-symbols:add-photo-alternate-outline-rounded" />上传图册</button>
-          <button><SvgIcon icon="material-symbols:history-rounded" />记账</button>
-          <button><SvgIcon icon="material-symbols:search-rounded" />搜索</button>
-          <button><SvgIcon icon="material-symbols:upload-file-outline-rounded" />导入数据</button>
-          <button><SvgIcon icon="material-symbols:more-horiz-rounded" />更多</button>
+          <button v-for="item in quickActions" :key="item[0]" type="button" @click="runQuickAction(item[0])">
+            <SvgIcon :icon="item[1]" />{{ item[0] }}
+          </button>
         </div>
       </article>
 
       <article class="lm-card realtime-card">
         <div class="lm-card-title">
           <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:sensors-rounded" /></span>实时状态（SSE）</h2>
-          <button>全部事件 ›</button>
+          <button type="button" @click="showEventModal = true">新增事件 ›</button>
         </div>
         <div class="status-list">
-          <div v-for="item in status" :key="item[0]">
+          <div v-for="item in status" :key="item[0] + item[1]">
             <span></span>
             <strong>{{ item[0] }}</strong>
             <time>{{ item[1] }}</time>
@@ -181,12 +349,89 @@ const status = [
         </div>
       </article>
     </section>
+
+    <LifeModal
+      v-model:show="showTodoModal"
+      title="新增待办"
+      description="快速补一条今天想完成的小事情。"
+      confirm-text="保存待办"
+      @confirm="createTodo"
+    >
+      <div class="demo-form">
+        <label>
+          <span>待办标题</span>
+          <input v-model="newTodoTitle" type="text" maxlength="30" placeholder="例如：整理旅行证件" />
+        </label>
+        <div class="demo-form-grid">
+          <label>
+            <span>分类</span>
+            <select v-model="newTodoTag">
+              <option>生活</option>
+              <option>工作</option>
+              <option>学习</option>
+              <option>旅行</option>
+            </select>
+          </label>
+          <label>
+            <span>时间</span>
+            <input v-model="newTodoTime" type="time" />
+          </label>
+        </div>
+      </div>
+    </LifeModal>
+
+    <LifeModal
+      v-model:show="showEventModal"
+      title="新增动态记录"
+      description="把刚刚发生的小进展记进时间线。"
+      confirm-text="加入动态"
+      @confirm="addTimelineEvent"
+    >
+      <div class="demo-event-card">
+        <strong>晚间复盘 · 21:30</strong>
+        <p>用于演示搜索 / 通知 / SSE 状态补录这类轻量交互。</p>
+      </div>
+    </LifeModal>
   </LifeAppShell>
 </template>
 
 <style scoped>
 .home-summary {
   grid-template-columns: 1.05fr 1fr 1.35fr;
+}
+
+.summary-switch {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border: 1px solid #eceef6;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.summary-switch button,
+.project-filters button,
+.pin-btn,
+.todo-item {
+  border: 0;
+}
+
+.summary-switch button,
+.project-filters button {
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: transparent;
+  color: #697183;
+  font-size: 11px;
+}
+
+.summary-switch button.active,
+.project-filters button.active {
+  background: linear-gradient(135deg, #7258ed, #765ce8);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(111, 83, 231, 0.18);
 }
 
 .round-only {
@@ -203,6 +448,7 @@ const status = [
   position: relative;
   min-width: 143px;
   padding: 8px 50px 8px 13px;
+  text-align: left;
 }
 
 .weather-pill span {
@@ -269,16 +515,35 @@ const status = [
   gap: 12px;
 }
 
-.todo-list div {
+.todo-item {
   display: grid;
   grid-template-columns: 13px minmax(0, 1fr) auto auto 13px;
   gap: 9px;
   align-items: center;
+  padding: 0;
+  background: transparent;
   color: #343b4d;
   font-size: 11px;
+  text-align: left;
 }
 
-.todo-list strong,
+.todo-item.done strong {
+  color: #97a0b3;
+  text-decoration: line-through;
+}
+
+.todo-item.done em {
+  background: #f0ecff;
+  color: #745de8;
+}
+
+.todo-item.done .check {
+  border-color: #765ce8;
+  background: #765ce8;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+.todo-item strong,
 .expire-list strong,
 .status-list strong {
   overflow: hidden;
@@ -286,7 +551,7 @@ const status = [
   white-space: nowrap;
 }
 
-.todo-list em {
+.todo-item em {
   padding: 2px 6px;
   border-radius: 5px;
   background: #eef8f4;
@@ -295,7 +560,7 @@ const status = [
   font-size: 9px;
 }
 
-.todo-list time,
+.todo-item time,
 .expire-list time,
 .status-list time {
   color: #7c8394;
@@ -335,6 +600,18 @@ const status = [
   margin-top: 14px;
 }
 
+.project-strip-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-filters {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .home-projects {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -342,10 +619,26 @@ const status = [
 }
 
 .home-projects article {
+  position: relative;
   overflow: hidden;
   border: 1px solid #edf0f6;
   border-radius: 8px;
   background: #fff;
+}
+
+.pin-btn {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #745de8;
+  box-shadow: 0 8px 18px rgba(54, 61, 92, 0.12);
 }
 
 .home-project-cover {
@@ -512,6 +805,58 @@ const status = [
   height: 6px;
   border-radius: 50%;
   background: #765ce8;
+}
+
+.demo-form {
+  display: grid;
+  gap: 14px;
+}
+
+.demo-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.demo-form span {
+  color: #697183;
+  font-size: 12px;
+}
+
+.demo-form input,
+.demo-form select {
+  height: 38px;
+  border: 1px solid #e7e9f2;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 12px;
+  color: #1d2332;
+  outline: none;
+}
+
+.demo-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.demo-event-card {
+  padding: 14px;
+  border: 1px solid #eceef6;
+  border-radius: 8px;
+  background: #fafafe;
+}
+
+.demo-event-card strong {
+  display: block;
+  color: #202636;
+  font-size: 13px;
+}
+
+.demo-event-card p {
+  margin: 8px 0 0;
+  color: #7b8294;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 @media (max-width: 1180px) {
