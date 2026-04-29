@@ -2,7 +2,6 @@ package org.dromara.common.web.interceptor;
 
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.map.MapUtil;
-import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -75,12 +75,20 @@ public class PlusWebInvokeTimeInterceptor implements HandlerInterceptor {
         if (node == null) {
             return;
         }
+        Set<String> excludePropertySet = new HashSet<>(Arrays.asList(excludeProperties));
+        removeSensitiveFields(node, excludePropertySet);
+    }
+
+    private void removeSensitiveFields(JsonNode node, Set<String> excludeProperties) {
+        if (node == null) {
+            return;
+        }
         if (node.isObject()) {
             ObjectNode objectNode = (ObjectNode) node;
             // 收集要删除的字段名（避免 ConcurrentModification）
             Set<String> fieldsToRemove = new HashSet<>();
             objectNode.fieldNames().forEachRemaining(fieldName -> {
-                if (ArrayUtil.contains(excludeProperties, fieldName)) {
+                if (excludeProperties.contains(fieldName)) {
                     fieldsToRemove.add(fieldName);
                 }
             });

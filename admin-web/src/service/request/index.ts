@@ -37,26 +37,30 @@ export const request = createFlatRequest(
       return response.data.data;
     },
     async onRequest(config) {
-      const isToken = config.headers?.isToken === false;
+      const isToken = getHeaderValue(config, 'isToken') === false;
       // set token
       const token = localStg.get('token');
       if (token && !isToken) {
-        const Authorization = getAuthorization();
-        Object.assign(config.headers, { Authorization });
+        setHeader(config, 'Authorization', getAuthorization());
       }
 
       // 客户端 ID
-      config.headers.Clientid = import.meta.env.VITE_APP_CLIENT_ID;
+      setHeader(config, 'Clientid', import.meta.env.VITE_APP_CLIENT_ID);
       // 对应国际化资源文件后缀
-      config.headers['Content-Language'] = (localStg.get('lang') || 'zh-CN').replace('-', '_');
+      setHeader(config, 'Content-Language', (localStg.get('lang') || 'zh-CN').replace('-', '_'));
 
       handleRepeatSubmit(config);
 
       handleEncrypt(config);
 
+      // 内部控制标记只给前端拦截器使用，不能作为真实请求头发给后端
+      deleteHeader(config, 'isToken');
+      deleteHeader(config, 'isEncrypt');
+      deleteHeader(config, 'repeatSubmit');
+
       // FormData数据去请求头Content-Type
       if (config.data instanceof FormData) {
-        delete config.headers['Content-Type'];
+        deleteHeader(config, 'Content-Type');
       }
 
       return config;
@@ -180,9 +184,32 @@ export const request = createFlatRequest(
   }
 );
 
+function getHeaderValue(config: InternalAxiosRequestConfig, name: string) {
+  if (typeof config.headers?.get === 'function') {
+    return config.headers.get(name);
+  }
+  return config.headers?.[name];
+}
+
+function setHeader(config: InternalAxiosRequestConfig, name: string, value: any) {
+  if (typeof config.headers?.set === 'function') {
+    config.headers.set(name, value);
+  } else {
+    config.headers[name] = value;
+  }
+}
+
+function deleteHeader(config: InternalAxiosRequestConfig, name: string) {
+  if (typeof config.headers?.delete === 'function') {
+    config.headers.delete(name);
+  } else {
+    delete config.headers[name];
+  }
+}
+
 function handleRepeatSubmit(config: InternalAxiosRequestConfig) {
   // 是否需要防止数据重复提交
-  const isRepeatSubmit = config.headers?.repeatSubmit === false;
+  const isRepeatSubmit = getHeaderValue(config, 'repeatSubmit') === false;
 
   if (!isRepeatSubmit && (config.method === 'post' || config.method === 'put')) {
     const requestObj = {
@@ -211,14 +238,17 @@ function handleRepeatSubmit(config: InternalAxiosRequestConfig) {
 
 function handleEncrypt(config: InternalAxiosRequestConfig) {
   // 是否需要加密
-  const isEncrypt = config.headers?.isEncrypt === 'true';
+  const encryptFlag = getHeaderValue(config, 'isEncrypt');
+  const isEncrypt = encryptFlag === true || encryptFlag === 'true';
 
   if (import.meta.env.VITE_APP_ENCRYPT === 'Y') {
     // 当开启参数加密
-    if (isEncrypt && (config.method === 'post' || config.method === 'put')) {
+    const method = String(config.method || '').toLowerCase();
+    if (isEncrypt && (method === 'post' || method === 'put')) {
       // 生成一个 AES 密钥
       const aesKey = generateAesKey();
-      config.headers[encryptHeader] = encrypt(encryptBase64(aesKey));
+      const encryptedKey = encrypt(encryptBase64(aesKey));
+      setHeader(config, encryptHeader, encryptedKey);
       config.data =
         typeof config.data === 'object'
           ? encryptWithAes(JSON.stringify(config.data), aesKey)

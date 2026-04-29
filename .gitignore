@@ -1,0 +1,35 @@
+# Runtime and local agent files
+.run/
+.cc-connect/
+AGENTS.md
+
+# Local env overrides
+.env*.local
+admin-web/.env*.local
+admin-service/**/application-*.local.yml
+admin-service/**/application-*.local.yaml
+admin-service/**/application-*.local.properties
+
+# Logs
+logs/
+*.log
+admin-service/logs/
+
+# IDE and OS metadata
+.idea/
+.vscode/
+.DS_Store
+
+# Node dependencies
+node_modules/
+admin-web/node_modules/
+admin-web/packages/*/node_modules/
+
+# Java/Maven build outputs
+target/
+**/target/
+**/.flattened-pom.xml
+
+# Local dumps and generated archives
+*.dump
+*.bak
