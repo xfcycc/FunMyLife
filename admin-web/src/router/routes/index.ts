@@ -34,7 +34,7 @@ const dynamicConstantRoutes: ElegantRoute[] = [
   {
     name: 'home',
     path: '/home',
-    component: 'layout.base$view.home',
+    component: 'layout.blank$view.home',
     meta: {
       title: 'home',
       i18nKey: 'route.home',
@@ -45,7 +45,7 @@ const dynamicConstantRoutes: ElegantRoute[] = [
   {
     name: 'projects',
     path: '/projects',
-    component: 'layout.base$view.projects',
+    component: 'layout.blank$view.projects',
     meta: {
       title: '项目管理',
       icon: 'material-symbols:dashboard-customize-outline-rounded',
@@ -55,7 +55,7 @@ const dynamicConstantRoutes: ElegantRoute[] = [
   {
     name: 'infinity-nikki',
     path: '/infinity-nikki',
-    component: 'layout.base$view.infinity-nikki',
+    component: 'layout.blank$view.infinity-nikki',
     meta: {
       title: '无限暖暖',
       icon: 'material-symbols:stadia-controller-outline-rounded',
@@ -65,7 +65,7 @@ const dynamicConstantRoutes: ElegantRoute[] = [
   {
     name: 'infinity-nikki-manage',
     path: '/infinity-nikki-manage',
-    component: 'layout.base$view.infinity-nikki-manage',
+    component: 'layout.blank$view.infinity-nikki-manage',
     meta: {
       title: '无限暖暖管理',
       icon: 'material-symbols:settings-outline-rounded',
@@ -75,7 +75,7 @@ const dynamicConstantRoutes: ElegantRoute[] = [
   {
     name: 'japan-travel',
     path: '/japan-travel',
-    component: 'layout.base$view.japan-travel',
+    component: 'layout.blank$view.japan-travel',
     meta: {
       title: '日本旅行 2026',
       icon: 'material-symbols:flight-takeoff-rounded',
@@ -85,7 +85,7 @@ const dynamicConstantRoutes: ElegantRoute[] = [
   {
     name: 'japan-travel-manage',
     path: '/japan-travel-manage',
-    component: 'layout.base$view.japan-travel-manage',
+    component: 'layout.blank$view.japan-travel-manage',
     meta: {
       title: '日本旅行管理',
       icon: 'material-symbols:travel-explore-rounded',

@@ -82,12 +82,10 @@ export const generatedRoutes: GeneratedRoute[] = [
   {
     name: 'home',
     path: '/home',
-    component: 'layout.base$view.home',
+    component: 'layout.blank$view.home',
     meta: {
       title: 'home',
-      i18nKey: 'route.home',
-      icon: 'mdi:monitor-dashboard',
-      order: 1
+      i18nKey: 'route.home'
     }
   },
   {
@@ -106,7 +104,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   {
     name: 'infinity-nikki',
     path: '/infinity-nikki',
-    component: 'layout.base$view.infinity-nikki',
+    component: 'layout.blank$view.infinity-nikki',
     meta: {
       title: 'infinity-nikki',
       i18nKey: 'route.infinity-nikki'
@@ -115,7 +113,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   {
     name: 'infinity-nikki-manage',
     path: '/infinity-nikki-manage',
-    component: 'layout.base$view.infinity-nikki-manage',
+    component: 'layout.blank$view.infinity-nikki-manage',
     meta: {
       title: 'infinity-nikki-manage',
       i18nKey: 'route.infinity-nikki-manage'
@@ -124,7 +122,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   {
     name: 'japan-travel',
     path: '/japan-travel',
-    component: 'layout.base$view.japan-travel',
+    component: 'layout.blank$view.japan-travel',
     meta: {
       title: 'japan-travel',
       i18nKey: 'route.japan-travel'
@@ -133,7 +131,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   {
     name: 'japan-travel-manage',
     path: '/japan-travel-manage',
-    component: 'layout.base$view.japan-travel-manage',
+    component: 'layout.blank$view.japan-travel-manage',
     meta: {
       title: 'japan-travel-manage',
       i18nKey: 'route.japan-travel-manage'
@@ -201,7 +199,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   {
     name: 'projects',
     path: '/projects',
-    component: 'layout.base$view.projects',
+    component: 'layout.blank$view.projects',
     meta: {
       title: 'projects',
       i18nKey: 'route.projects'

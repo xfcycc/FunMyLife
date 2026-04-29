@@ -3,181 +3,1438 @@ defineOptions({
   name: 'Projects'
 });
 
+const navItems = [
+  { label: '首页', icon: 'material-symbols:home-outline-rounded' },
+  { label: '项目', icon: 'material-symbols:calendar-month-outline-rounded', active: true },
+  { label: '日程', icon: 'material-symbols:calendar-today-outline-rounded' },
+  { label: '清单', icon: 'material-symbols:select-check-box-outline-rounded' },
+  { label: '记录', icon: 'material-symbols:edit-square-outline-rounded' },
+  { label: '资产', icon: 'material-symbols:inventory-2-outline-rounded' },
+  { label: 'AI 助手', icon: 'material-symbols:smart-toy-outline-rounded' },
+  { label: '数据统计', icon: 'material-symbols:donut-large-outline-rounded' },
+  { label: '设置', icon: 'material-symbols:settings-outline-rounded' }
+];
+
+const statCards = [
+  {
+    label: '全部项目',
+    value: '12',
+    note: '进行中 9　已归档 3',
+    icon: 'material-symbols:folder-outline-rounded',
+    tone: 'purple'
+  },
+  {
+    label: '待处理提醒',
+    value: '28',
+    note: '今天 8　未来7天 20',
+    icon: 'material-symbols:alarm-outline-rounded',
+    tone: 'coral'
+  },
+  {
+    label: '待办任务',
+    value: '56',
+    note: '已完成 103',
+    icon: 'material-symbols:fact-check-outline-rounded',
+    tone: 'green'
+  },
+  {
+    label: '笔记记录',
+    value: '138',
+    note: '本周新增 16',
+    icon: 'material-symbols:article-outline-rounded',
+    tone: 'blue'
+  },
+  {
+    label: '图册/文件',
+    value: '342',
+    note: '本月新增 48',
+    icon: 'material-symbols:add-photo-alternate-outline-rounded',
+    tone: 'violet'
+  },
+  {
+    label: 'AI 总结',
+    value: '24',
+    note: '待生成 5',
+    icon: 'material-symbols:robot-2-outline-rounded',
+    tone: 'mint'
+  }
+];
+
 const filters = ['全部', '游戏', '旅行', '学习', '生活', '归档'];
 
 const projects = [
   {
     name: '无限暖暖',
     type: '游戏',
-    desc: '日常、周常、活动倒计时、账号资产、截图图册和攻略笔记。',
-    route: '/infinity-nikki',
-    manage: '/infinity-nikki-manage',
-    tone: 'rose',
-    next: '活动结束还有 3 天',
-    status: 'AI 建议已更新'
-  },
-  {
-    name: '日本旅行 2026',
-    type: '旅行',
-    desc: '行程、机票酒店、行前清单、证件资料、预算和旅行图册。',
-    route: '/japan-travel',
-    manage: '/japan-travel-manage',
-    tone: 'blue',
-    next: '出发倒计时 48 天',
-    status: '图册同步正常'
+    coverClass: 'nikki',
+    activity: '花愿镇奇遇季 4.1 版本',
+    remind: '12',
+    todo: '8/15',
+    note: '24',
+    file: '56',
+    next: '每日任务重置 10:00',
+    ai: '已更新',
+    aiState: 'done',
+    icon: 'material-symbols:stadia-controller-outline-rounded',
+    favorited: true
   },
   {
     name: '原神',
     type: '游戏',
-    desc: '版本更新、深渊周期、活动任务、账号资料和抽卡计划。',
-    route: '/projects',
-    manage: '/projects',
-    tone: 'amber',
-    next: '周常刷新 2 天后',
-    status: '待整理笔记'
+    coverClass: 'genshin',
+    activity: '4.6 版本「两界为火」',
+    remind: '9',
+    todo: '6/12',
+    note: '18',
+    file: '42',
+    next: '树脂恢复提醒 18:00',
+    ai: '已更新',
+    aiState: 'done',
+    icon: 'material-symbols:stadia-controller-outline-rounded',
+    favorited: false
+  },
+  {
+    name: '日本旅行 2026',
+    type: '旅行',
+    coverClass: 'japan',
+    activity: '机票预订已确认',
+    remind: '15',
+    todo: '11/20',
+    note: '32',
+    file: '128',
+    next: '签证材料整理 5月25日',
+    ai: '生成中',
+    aiState: 'pending',
+    icon: 'material-symbols:flight-takeoff-rounded',
+    favorited: false
   },
   {
     name: 'OpenAI 学习计划',
     type: '学习',
-    desc: '课程记录、阅读笔记、实践清单、学习复盘和 AI 摘要。',
-    route: '/projects',
-    manage: '/projects',
-    tone: 'teal',
-    next: '今晚 20:00 复习',
-    status: '连续 23 天'
+    coverClass: 'openai',
+    activity: '学习周报已生成',
+    remind: '6',
+    todo: '7/14',
+    note: '19',
+    file: '8',
+    next: '每日学习打卡 20:30',
+    ai: '已更新',
+    aiState: 'done',
+    icon: 'material-symbols:menu-book-outline-rounded',
+    favorited: false
   },
   {
     name: '家庭保险',
     type: '生活',
-    desc: '保单、扣费提醒、覆盖范围、家庭成员和理赔资料。',
-    route: '/projects',
-    manage: '/projects',
-    tone: 'amber',
-    next: '扣费还有 27 天',
-    status: '资料完整'
+    coverClass: 'family',
+    activity: '重疾险即将自动续费',
+    remind: '4',
+    todo: '3/6',
+    note: '12',
+    file: '6',
+    next: '自动扣费提醒 6月10日',
+    ai: '已更新',
+    aiState: 'done',
+    icon: 'material-symbols:health-and-safety-outline-rounded',
+    favorited: false
   },
   {
     name: '年度健康管理',
     type: '生活',
-    desc: '体检报告、复诊提醒、运动记录和年度健康总结。',
-    route: '/projects',
-    manage: '/projects',
-    tone: 'teal',
-    next: '体检预约待确认',
-    status: 'AI 摘要待生成'
+    coverClass: 'health',
+    activity: '体检报告已记录',
+    remind: '5',
+    todo: '6/10',
+    note: '15',
+    file: '10',
+    next: '每日运动打卡 21:00',
+    ai: '待生成',
+    aiState: 'todo',
+    icon: 'material-symbols:favorite-outline-rounded',
+    favorited: false
   }
 ];
 
-const updates = [
-  '无限暖暖新增 1 条直播提醒',
-  '日本旅行 2026 上传 18 张照片',
-  'OpenAI 学习计划生成了周报',
-  '家庭保险保单资料已归档'
+const recentUpdates = [
+  {
+    title: '日本旅行 2026',
+    desc: '新增笔记：京都行程规划',
+    time: '2 小时前',
+    icon: 'material-symbols:folder-open-outline-rounded',
+    tone: 'blue'
+  },
+  {
+    title: '无限暖暖',
+    desc: '完成每日任务 7/15',
+    time: '3 小时前',
+    icon: 'material-symbols:stadia-controller-outline-rounded',
+    tone: 'coral'
+  },
+  {
+    title: 'OpenAI 学习计划',
+    desc: 'AI 生成学习周报',
+    time: '昨天 22:15',
+    icon: 'material-symbols:neurology-outline-rounded',
+    tone: 'mint'
+  },
+  {
+    title: '家庭保险',
+    desc: '更新了保单资料',
+    time: '昨天 18:30',
+    icon: 'material-symbols:shield-outline-rounded',
+    tone: 'violet'
+  },
+  {
+    title: '原神',
+    desc: '新增待办：周常 BOSS 击败',
+    time: '昨天 17:45',
+    icon: 'material-symbols:stars-outline-rounded',
+    tone: 'amber'
+  }
 ];
 
-const templates = ['游戏项目', '旅行项目', '学习计划', '保险资料', '订阅服务', '自定义项目'];
+const templates = [
+  {
+    title: '游戏项目模板',
+    desc: '日常笔记、活动提醒、版本追踪',
+    icon: 'material-symbols:stadia-controller-outline-rounded',
+    tone: 'amber'
+  },
+  {
+    title: '旅行项目模板',
+    desc: '行程规划、预订管理、旅行记录',
+    icon: 'material-symbols:flight-takeoff-rounded',
+    tone: 'blue'
+  },
+  {
+    title: '学习项目模板',
+    desc: '学习计划、打卡任务、笔记整理',
+    icon: 'material-symbols:school-outline-rounded',
+    tone: 'mint'
+  },
+  {
+    title: '生活项目模板',
+    desc: '提醒清单、资产管理、记录整理',
+    icon: 'material-symbols:home-outline-rounded',
+    tone: 'rose'
+  }
+];
 </script>
 
 <template>
-  <div class="life-page">
-    <div class="life-shell">
-      <section class="life-hero">
-        <h1 class="life-hero-title">项目管理</h1>
-        <p class="life-hero-subtitle">
-          项目是 FunMyLife 的生活容器。它把提醒、资产、笔记、图册和 AI 总结收拢到同一个生活对象下。
-        </p>
-        <div class="life-hero-actions">
-          <NInput round placeholder="搜索项目、标签或近期动态" style="max-width: 360px">
-            <template #prefix>
-              <SvgIcon icon="material-symbols:search-rounded" />
-            </template>
-          </NInput>
-          <NButton type="primary" round>
-            <template #icon>
-              <SvgIcon icon="material-symbols:add-rounded" />
-            </template>
-            新建项目
-          </NButton>
+  <main class="pm-page">
+    <aside class="pm-sidebar">
+      <div class="pm-brand">
+        <div class="pm-logo"></div>
+        <div>
+          <strong>Life Manager</strong>
+          <span>你的生活，由你掌控</span>
         </div>
+      </div>
+
+      <nav class="pm-nav" aria-label="主导航">
+        <button v-for="item in navItems" :key="item.label" class="pm-nav-item" :class="{ active: item.active }">
+          <SvgIcon :icon="item.icon" />
+          <span>{{ item.label }}</span>
+        </button>
+      </nav>
+
+      <div class="pm-profile">
+        <div class="pm-profile-main">
+          <div class="pm-avatar"></div>
+          <div>
+            <strong>夏目悠然 <span>Pro</span></strong>
+            <p>专注生活的每一天 ✨</p>
+          </div>
+        </div>
+        <div class="pm-energy">
+          <div>
+            <span>今日能量</span>
+            <strong>87 / 100</strong>
+          </div>
+          <div class="pm-energy-bar"><i></i></div>
+        </div>
+      </div>
+
+      <div class="pm-sidebar-tools">
+        <button aria-label="夜间模式"><SvgIcon icon="material-symbols:dark-mode-outline-rounded" /></button>
+        <button aria-label="通知"><SvgIcon icon="material-symbols:notifications-outline-rounded" /></button>
+        <button aria-label="帮助"><SvgIcon icon="material-symbols:help-outline-rounded" /></button>
+        <button aria-label="扩展"><SvgIcon icon="material-symbols:dashboard-customize-outline-rounded" /></button>
+      </div>
+    </aside>
+
+    <section class="pm-main">
+      <header class="pm-header">
+        <div>
+          <h1>项目管理</h1>
+          <p>用项目聚合生活中的一切，让每件事井井有条</p>
+        </div>
+        <div class="pm-header-actions">
+          <label class="pm-search">
+            <SvgIcon icon="material-symbols:search-rounded" />
+            <input placeholder="搜索项目名称或内容" />
+          </label>
+          <button class="pm-select">类型 <SvgIcon icon="material-symbols:expand-more-rounded" /></button>
+          <button class="pm-select">状态 <SvgIcon icon="material-symbols:expand-more-rounded" /></button>
+          <button class="pm-select">排序 <SvgIcon icon="material-symbols:expand-more-rounded" /></button>
+          <button class="pm-primary"><SvgIcon icon="material-symbols:add-rounded" />新建项目</button>
+          <button class="pm-icon-button has-dot" aria-label="通知">
+            <SvgIcon icon="material-symbols:notifications-outline-rounded" />
+          </button>
+          <button class="pm-user" aria-label="用户头像"></button>
+        </div>
+      </header>
+
+      <section class="pm-stats" aria-label="项目统计">
+        <article v-for="item in statCards" :key="item.label" class="pm-stat-card">
+          <span class="pm-stat-icon" :class="item.tone"><SvgIcon :icon="item.icon" /></span>
+          <div>
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <p>{{ item.note }}</p>
+          </div>
+        </article>
       </section>
 
-      <section class="life-card">
-        <div class="life-card-head">
-          <div class="life-tabs">
-            <span v-for="item in filters" :key="item" class="life-tab" :class="{ active: item === '全部' }">
-              {{ item }}
-            </span>
+      <div class="pm-content-grid">
+        <section class="pm-projects">
+          <div class="pm-toolbar">
+            <div class="pm-tabs">
+              <button v-for="item in filters" :key="item" :class="{ active: item === '全部' }">{{ item }}</button>
+            </div>
+            <div class="pm-view-switch">
+              <button class="active"><SvgIcon icon="material-symbols:grid-view-rounded" />卡片视图</button>
+              <button><SvgIcon icon="material-symbols:format-list-bulleted-rounded" />列表视图</button>
+            </div>
           </div>
-          <NButton quaternary circle>
-            <template #icon>
-              <SvgIcon icon="material-symbols:tune-rounded" />
-            </template>
-          </NButton>
-        </div>
-        <div class="life-grid">
-          <article v-for="item in projects" :key="item.name" class="life-project-card life-span-4">
-            <div class="flex items-start justify-between gap-12px">
-              <div class="life-project-cover">{{ item.name.slice(0, 1) }}</div>
-              <span class="life-tag" :class="item.tone">{{ item.type }}</span>
-            </div>
-            <h3 class="life-project-title">{{ item.name }}</h3>
-            <p class="life-project-desc">{{ item.desc }}</p>
-            <div class="life-mini-grid">
-              <div class="life-mini-cell">
-                <span>下一个提醒</span>
-                <strong>{{ item.next }}</strong>
-              </div>
-              <div class="life-mini-cell">
-                <span>整理状态</span>
-                <strong>{{ item.status }}</strong>
-              </div>
-            </div>
-            <div class="mt-16px flex gap-10px">
-              <RouterLink :to="item.route">
-                <NButton size="small" type="primary" secondary round>进入项目</NButton>
-              </RouterLink>
-              <RouterLink :to="item.manage">
-                <NButton size="small" quaternary round>管理</NButton>
-              </RouterLink>
-            </div>
-          </article>
-        </div>
-      </section>
 
-      <section class="life-grid">
-        <div class="life-card life-span-7">
-          <div class="life-card-head">
-            <h2 class="life-card-title">
-              <span class="life-icon teal"><SvgIcon icon="material-symbols:update-rounded" /></span>
-              最近更新
-            </h2>
-          </div>
-          <div class="life-list">
-            <div v-for="item in updates" :key="item" class="life-list-item">
-              <span class="life-dot" />
-              <div class="life-list-main">
-                <div class="life-list-title">{{ item }}</div>
-                <div class="life-list-meta">刚刚同步到项目时间线</div>
+          <div class="pm-card-grid">
+            <article v-for="item in projects" :key="item.name" class="pm-project-card">
+              <div class="pm-cover" :class="item.coverClass">
+                <button class="pm-card-action" aria-label="收藏">
+                  <SvgIcon :icon="item.favorited ? 'material-symbols:star-rounded' : 'material-symbols:add-rounded'" />
+                </button>
               </div>
-            </div>
+              <div class="pm-card-body">
+                <div class="pm-title-line">
+                  <span class="pm-project-icon"><SvgIcon :icon="item.icon" /></span>
+                  <h2>{{ item.name }}</h2>
+                  <span class="pm-type">{{ item.type }}</span>
+                </div>
+                <p class="pm-activity">最近活动：{{ item.activity }}</p>
+                <div class="pm-metrics">
+                  <div>
+                    <SvgIcon icon="material-symbols:notifications-active-outline-rounded" />
+                    <span>提醒</span>
+                    <strong>{{ item.remind }}</strong>
+                  </div>
+                  <div>
+                    <SvgIcon icon="material-symbols:check-circle-outline-rounded" />
+                    <span>待办</span>
+                    <strong>{{ item.todo }}</strong>
+                  </div>
+                  <div>
+                    <SvgIcon icon="material-symbols:article-outline-rounded" />
+                    <span>笔记</span>
+                    <strong>{{ item.note }}</strong>
+                  </div>
+                  <div>
+                    <SvgIcon icon="material-symbols:add-photo-alternate-outline-rounded" />
+                    <span>图册</span>
+                    <strong>{{ item.file }}</strong>
+                  </div>
+                </div>
+              </div>
+              <footer class="pm-card-footer">
+                <span>下次提醒：{{ item.next }}</span>
+                <span class="pm-ai" :class="item.aiState"><i></i>AI 总结：{{ item.ai }}</span>
+              </footer>
+            </article>
           </div>
-        </div>
 
-        <div class="life-card life-span-5">
-          <div class="life-card-head">
-            <h2 class="life-card-title">
-              <span class="life-icon amber"><SvgIcon icon="material-symbols:dashboard-customize-outline-rounded" /></span>
-              项目模板
-            </h2>
+          <button class="pm-load-more">加载更多项目 <SvgIcon icon="material-symbols:expand-more-rounded" /></button>
+
+          <div class="pm-tip">
+            <span><SvgIcon icon="material-symbols:shield-outline-rounded" /></span>
+            <p>
+              <strong>项目是你的生活容器</strong>
+              将分散在日程、清单、资产、笔记、图册、AI 等模块的内容汇聚在一起，形成完整的项目视图。
+            </p>
+            <button>了解更多</button>
           </div>
-          <div class="life-mini-grid">
-            <button v-for="item in templates" :key="item" class="life-mini-cell cursor-pointer text-left">
-              <SvgIcon icon="material-symbols:add-box-outline-rounded" class="mb-8px text-22px color-#7568ff" />
-              <strong>{{ item }}</strong>
-            </button>
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
+        </section>
+
+        <aside class="pm-right">
+          <section class="pm-panel">
+            <div class="pm-panel-head">
+              <h2>最近更新</h2>
+              <button>查看全部</button>
+            </div>
+            <div class="pm-update-list">
+              <article v-for="item in recentUpdates" :key="item.title + item.time" class="pm-update">
+                <span class="pm-update-icon" :class="item.tone"><SvgIcon :icon="item.icon" /></span>
+                <div>
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.desc }}</p>
+                </div>
+                <time>{{ item.time }}</time>
+              </article>
+            </div>
+          </section>
+
+          <section class="pm-panel">
+            <div class="pm-panel-head">
+              <h2>项目模板</h2>
+              <button>新建模板</button>
+            </div>
+            <div class="pm-template-list">
+              <article v-for="item in templates" :key="item.title" class="pm-template">
+                <span class="pm-update-icon" :class="item.tone"><SvgIcon :icon="item.icon" /></span>
+                <div>
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.desc }}</p>
+                </div>
+              </article>
+            </div>
+            <button class="pm-all-template">查看全部模板 <SvgIcon icon="material-symbols:arrow-forward-rounded" /></button>
+          </section>
+        </aside>
+      </div>
+    </section>
+  </main>
 </template>
+
+<style scoped>
+.pm-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(248, 249, 254, 0.92)),
+    #f6f7fb;
+  color: #141927;
+  font-family:
+    Inter,
+    'PingFang SC',
+    'Microsoft YaHei',
+    Arial,
+    sans-serif;
+}
+
+.pm-page * {
+  box-sizing: border-box;
+  letter-spacing: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+.pm-sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 32px 14px 18px;
+  border-right: 1px solid #e9ebf4;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 10px 0 35px rgba(42, 47, 78, 0.03);
+}
+
+.pm-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px 34px;
+}
+
+.pm-logo {
+  width: 28px;
+  height: 28px;
+  transform: rotate(45deg);
+  border-radius: 4px;
+  background: linear-gradient(135deg, #a69bff 0%, #6d56e8 54%, #4e39d2 100%);
+  box-shadow: 0 10px 22px rgba(111, 90, 232, 0.28);
+}
+
+.pm-brand strong {
+  display: block;
+  font-size: 17px;
+  line-height: 1.15;
+  color: #101422;
+}
+
+.pm-brand span {
+  display: block;
+  margin-top: 7px;
+  font-size: 11px;
+  color: #8c91a3;
+}
+
+.pm-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.pm-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: transparent;
+  color: #565d6f;
+  font-size: 14px;
+  text-align: left;
+}
+
+.pm-nav-item .svg-icon {
+  width: 19px;
+  height: 19px;
+  color: #606779;
+}
+
+.pm-nav-item.active {
+  background: linear-gradient(135deg, #7259ee, #7c5dfa);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(111, 82, 234, 0.32);
+}
+
+.pm-nav-item.active .svg-icon {
+  color: #fff;
+}
+
+.pm-profile {
+  margin-top: auto;
+  padding: 0 6px 18px;
+}
+
+.pm-profile-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 18px;
+}
+
+.pm-avatar,
+.pm-user {
+  background:
+    radial-gradient(circle at 52% 36%, #ffd9de 0 12%, transparent 13%),
+    radial-gradient(circle at 47% 30%, #221e36 0 15%, transparent 16%),
+    radial-gradient(circle at 50% 62%, #f5b2c3 0 19%, transparent 20%),
+    linear-gradient(135deg, #c7b6ff, #ffd0df);
+}
+
+.pm-avatar {
+  width: 42px;
+  height: 42px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 9px 20px rgba(116, 98, 190, 0.22);
+}
+
+.pm-profile-main strong {
+  display: block;
+  color: #34384a;
+  font-size: 13px;
+}
+
+.pm-profile-main strong span {
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #7861ef;
+  color: #fff;
+  font-size: 9px;
+}
+
+.pm-profile-main p {
+  margin: 5px 0 0;
+  color: #8a8fa1;
+  font-size: 11px;
+}
+
+.pm-energy {
+  border-top: 1px solid #edf0f7;
+  padding: 12px 2px 0;
+}
+
+.pm-energy div:first-child {
+  display: flex;
+  justify-content: space-between;
+  color: #8a8fa1;
+  font-size: 11px;
+}
+
+.pm-energy strong {
+  color: #4f5365;
+}
+
+.pm-energy-bar {
+  height: 7px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf0fa;
+}
+
+.pm-energy-bar i {
+  display: block;
+  width: 87%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8564ef, #7756e7);
+}
+
+.pm-sidebar-tools {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 8px 0;
+  border-top: 1px solid #edf0f7;
+}
+
+.pm-sidebar-tools button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: transparent;
+  color: #687084;
+}
+
+.pm-main {
+  min-width: 0;
+  min-height: 100vh;
+  padding: 31px 28px 14px 27px;
+}
+
+.pm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.pm-header h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.18;
+  font-weight: 800;
+  color: #0d111d;
+}
+
+.pm-header p {
+  margin: 9px 0 0;
+  color: #676d7f;
+  font-size: 14px;
+}
+
+.pm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pm-search,
+.pm-select,
+.pm-primary,
+.pm-icon-button,
+.pm-user {
+  height: 38px;
+  border: 1px solid #e7e9f2;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 8px 24px rgba(70, 75, 112, 0.04);
+}
+
+.pm-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 231px;
+  padding: 0 14px;
+  color: #7b8192;
+}
+
+.pm-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #42495a;
+  font-size: 12px;
+}
+
+.pm-search input::placeholder {
+  color: #a5aaba;
+}
+
+.pm-select,
+.pm-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  color: #343b4f;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.pm-primary {
+  min-width: 97px;
+  border: 0;
+  background: linear-gradient(135deg, #7359ef, #7055e7);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(112, 85, 231, 0.28);
+}
+
+.pm-icon-button,
+.pm-user {
+  position: relative;
+  width: 38px;
+  display: grid;
+  place-items: center;
+  color: #70778a;
+}
+
+.pm-icon-button.has-dot::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #ef5b84;
+}
+
+.pm-user {
+  border-radius: 50%;
+}
+
+.pm-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-top: 37px;
+  border: 1px solid #eceef5;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 15px 36px rgba(56, 62, 95, 0.08);
+}
+
+.pm-stat-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 17px;
+  min-height: 120px;
+  padding: 28px 20px 20px;
+}
+
+.pm-stat-card + .pm-stat-card {
+  border-left: 1px solid #eef0f6;
+}
+
+.pm-stat-icon,
+.pm-update-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 8px;
+}
+
+.pm-stat-icon {
+  width: 36px;
+  height: 36px;
+  font-size: 24px;
+}
+
+.pm-stat-icon.purple,
+.pm-update-icon.violet {
+  background: #f1ecff;
+  color: #755ce8;
+}
+
+.pm-stat-icon.coral,
+.pm-update-icon.coral {
+  background: #fff0ef;
+  color: #ef776f;
+}
+
+.pm-stat-icon.green,
+.pm-update-icon.mint {
+  background: #e9fbf4;
+  color: #31bd8b;
+}
+
+.pm-stat-icon.blue,
+.pm-update-icon.blue {
+  background: #eaf4ff;
+  color: #4a8df0;
+}
+
+.pm-stat-icon.violet {
+  background: #f0eaff;
+  color: #8b62ec;
+}
+
+.pm-stat-icon.mint {
+  background: #e7fbf3;
+  color: #2abf91;
+}
+
+.pm-update-icon.amber {
+  background: #fff4dc;
+  color: #edae32;
+}
+
+.pm-update-icon.rose {
+  background: #ffeaf2;
+  color: #ef6e99;
+}
+
+.pm-stat-card span:not(.pm-stat-icon) {
+  color: #596071;
+  font-size: 13px;
+}
+
+.pm-stat-card strong {
+  display: block;
+  margin-top: 8px;
+  color: #111725;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.pm-stat-card p {
+  margin: 14px 0 0;
+  color: #8f95a5;
+  font-size: 11px;
+}
+
+.pm-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 292px;
+  gap: 42px;
+  margin-top: 31px;
+}
+
+.pm-projects {
+  min-width: 0;
+}
+
+.pm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.pm-tabs,
+.pm-view-switch {
+  display: inline-flex;
+  align-items: center;
+  height: 37px;
+  border: 1px solid #edf0f6;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 9px 22px rgba(60, 65, 96, 0.04);
+}
+
+.pm-tabs {
+  padding: 3px 5px;
+  gap: 4px;
+}
+
+.pm-tabs button,
+.pm-view-switch button {
+  height: 29px;
+  border-radius: 8px;
+  background: transparent;
+  color: #4e5567;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.pm-tabs button {
+  min-width: 58px;
+}
+
+.pm-tabs button.active {
+  background: linear-gradient(135deg, #7459ef, #7459ef);
+  color: #fff;
+  box-shadow: 0 8px 17px rgba(112, 86, 232, 0.24);
+}
+
+.pm-view-switch {
+  padding: 4px;
+}
+
+.pm-view-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: #767d8f;
+}
+
+.pm-view-switch button.active {
+  background: #f3efff;
+  color: #6d55de;
+}
+
+.pm-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.pm-project-card {
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 13px 30px rgba(60, 67, 100, 0.1);
+}
+
+.pm-cover {
+  position: relative;
+  height: 119px;
+  overflow: hidden;
+  background-color: #dfe9f6;
+}
+
+.pm-cover::before,
+.pm-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.pm-cover.nikki {
+  background:
+    radial-gradient(circle at 68% 39%, #ffdae8 0 4%, transparent 4.6%),
+    radial-gradient(circle at 65% 62%, rgba(255, 255, 255, 0.88) 0 12%, transparent 12.8%),
+    linear-gradient(135deg, rgba(111, 170, 218, 0.65), rgba(251, 210, 224, 0.7)),
+    url('https://images.unsplash.com/photo-1516541196182-6bdb0516ed27?auto=format&fit=crop&w=900&q=80') center/cover;
+}
+
+.pm-cover.nikki::after {
+  width: 34%;
+  height: 125%;
+  left: 42%;
+  top: 2%;
+  border-radius: 52% 52% 36% 36%;
+  background:
+    radial-gradient(circle at 50% 16%, #ffe1dc 0 14%, transparent 15%),
+    linear-gradient(90deg, transparent 0 35%, #f29ab0 36% 47%, #ffd5df 48% 54%, #f29ab0 55% 67%, transparent 68%),
+    linear-gradient(180deg, #fff 32%, #f7b8cf 33% 54%, #fff6fb 55%);
+  filter: drop-shadow(0 10px 12px rgba(98, 72, 120, 0.18));
+}
+
+.pm-cover.genshin {
+  background:
+    radial-gradient(circle at 43% 94%, rgba(94, 163, 91, 0.9) 0 17%, transparent 18%),
+    radial-gradient(circle at 22% 88%, rgba(117, 184, 111, 0.85) 0 20%, transparent 21%),
+    linear-gradient(165deg, #9ed3ff 0 33%, #cce9ff 34% 42%, #8dc58a 43% 100%);
+}
+
+.pm-cover.genshin::before {
+  clip-path: polygon(9% 100%, 33% 23%, 55% 100%);
+  background: linear-gradient(180deg, #e8f5ff, #7fa789);
+  opacity: 0.9;
+}
+
+.pm-cover.genshin::after {
+  width: 22px;
+  height: 58px;
+  left: 68%;
+  top: 43px;
+  border-radius: 999px 999px 6px 6px;
+  background: linear-gradient(180deg, #20283d 0 22%, #ecd9bb 23% 42%, #293044 43% 100%);
+  box-shadow: 0 18px 0 -8px #283146;
+}
+
+.pm-cover.japan {
+  background:
+    radial-gradient(circle at 45% 23%, #fbfcff 0 14%, transparent 14.4%),
+    linear-gradient(180deg, #b9d9ef 0 48%, #f2d1d4 49% 58%, #a4b57f 59% 100%);
+}
+
+.pm-cover.japan::before {
+  clip-path: polygon(16% 70%, 45% 17%, 73% 70%);
+  background: linear-gradient(180deg, #fbfbff 0 33%, #7e9ab2 34% 100%);
+}
+
+.pm-cover.japan::after {
+  width: 74px;
+  height: 92px;
+  right: 32px;
+  bottom: 0;
+  background:
+    linear-gradient(90deg, transparent 0 9%, #583b28 10% 17%, transparent 18% 82%, #583b28 83% 90%, transparent 91%),
+    linear-gradient(180deg, transparent 0 13%, #c43d32 14% 22%, transparent 23% 38%, #2d2a26 39% 44%, #e8dfd1 45% 60%, #be3c31 61% 68%, #e9dfcf 69% 100%);
+  clip-path: polygon(50% 0, 100% 15%, 82% 18%, 92% 31%, 78% 34%, 87% 48%, 13% 48%, 22% 34%, 8% 31%, 18% 18%, 0 15%);
+}
+
+.pm-cover.openai {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 78% 15%, rgba(255, 255, 255, 0.54), transparent 26%),
+    linear-gradient(135deg, #c9b7ff, #e9dcff 45%, #d5b6ff);
+}
+
+.pm-cover.openai::before {
+  position: static;
+  content: '⌬';
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 70px;
+  line-height: 1;
+  filter: drop-shadow(0 7px 14px rgba(93, 69, 182, 0.24));
+}
+
+.pm-cover.family {
+  background:
+    radial-gradient(circle at 38% 88%, rgba(97, 151, 68, 0.65) 0 27%, transparent 28%),
+    radial-gradient(circle at 83% 7%, rgba(255, 255, 255, 0.75) 0 17%, transparent 18%),
+    linear-gradient(180deg, #d8edbc 0 38%, #7aa85f 39% 100%);
+}
+
+.pm-cover.family::after {
+  width: 102px;
+  height: 56px;
+  left: 35%;
+  bottom: 5px;
+  background:
+    radial-gradient(circle at 14% 26%, #f5d2b3 0 9%, transparent 10%),
+    radial-gradient(circle at 45% 17%, #f7d9bb 0 9%, transparent 10%),
+    radial-gradient(circle at 76% 27%, #f0c8a8 0 9%, transparent 10%),
+    linear-gradient(90deg, transparent 0 7%, #f5f0e9 8% 27%, transparent 28% 38%, #fff4ed 39% 58%, transparent 59% 69%, #eef4ff 70% 90%, transparent 91%);
+}
+
+.pm-cover.health {
+  background:
+    radial-gradient(circle at 67% 56%, #35bfd0 0 16%, transparent 17%),
+    linear-gradient(90deg, transparent 0 56%, #41c4d1 57% 86%, transparent 87%),
+    linear-gradient(180deg, #dff0f6 0 48%, #f3f7fa 49% 100%);
+}
+
+.pm-cover.health::before {
+  width: 44px;
+  height: 88px;
+  left: 33%;
+  bottom: 12px;
+  border-radius: 9px 9px 8px 8px;
+  background:
+    linear-gradient(180deg, #35bebd 0 10%, transparent 11% 22%, #7ee1df 23% 100%),
+    linear-gradient(90deg, transparent 0 20%, rgba(255, 255, 255, 0.46) 21% 33%, transparent 34%);
+  opacity: 0.92;
+}
+
+.pm-card-action {
+  position: absolute;
+  right: 13px;
+  top: 13px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #8d93a3;
+  box-shadow: 0 5px 10px rgba(50, 55, 80, 0.12);
+}
+
+.pm-card-body {
+  padding: 16px 13px 12px;
+}
+
+.pm-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pm-project-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  color: #7560e9;
+  font-size: 22px;
+}
+
+.pm-title-line h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #121724;
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-type {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #eef8f4;
+  color: #4f9b8a;
+  font-size: 11px;
+}
+
+.pm-activity {
+  margin: 9px 0 14px;
+  color: #6c7282;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pm-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.pm-metrics div {
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 5px;
+  color: #6f7688;
+  font-size: 11px;
+}
+
+.pm-metrics .svg-icon {
+  color: #826de5;
+}
+
+.pm-metrics strong {
+  color: #202535;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.pm-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 13px;
+  border-top: 1px solid #edf0f6;
+  color: #6f7688;
+  font-size: 11px;
+}
+
+.pm-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.pm-ai i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3ec8a2;
+}
+
+.pm-ai.pending i {
+  background: #f2b64d;
+}
+
+.pm-ai.todo i {
+  background: #ef5b84;
+}
+
+.pm-load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 16px auto 18px;
+  background: transparent;
+  color: #765ee8;
+  font-size: 13px;
+}
+
+.pm-tip {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 55px;
+  padding: 10px 14px;
+  border: 1px solid #e8ebf3;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+  color: #6d7484;
+  box-shadow: 0 9px 23px rgba(70, 75, 110, 0.04);
+}
+
+.pm-tip span {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 8px;
+  background: #e6f6ff;
+  color: #3a9cea;
+}
+
+.pm-tip p {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pm-tip strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #4a5062;
+}
+
+.pm-tip button {
+  height: 28px;
+  padding: 0 14px;
+  border: 1px solid #e5e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #6a7081;
+  font-size: 12px;
+}
+
+.pm-right {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.pm-panel {
+  padding: 18px 15px 16px;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 13px 30px rgba(60, 67, 100, 0.08);
+}
+
+.pm-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 17px;
+}
+
+.pm-panel-head h2 {
+  margin: 0;
+  color: #151a27;
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 760;
+}
+
+.pm-panel-head button,
+.pm-all-template {
+  background: transparent;
+  color: #8068eb;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pm-update-list,
+.pm-template-list {
+  display: grid;
+  gap: 18px;
+}
+
+.pm-update,
+.pm-template {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+}
+
+.pm-template {
+  grid-template-columns: 36px minmax(0, 1fr);
+}
+
+.pm-update-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+}
+
+.pm-template .pm-update-icon {
+  width: 36px;
+  height: 36px;
+  font-size: 19px;
+}
+
+.pm-update strong,
+.pm-template strong {
+  display: block;
+  overflow: hidden;
+  color: #2c3142;
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-update p,
+.pm-template p {
+  margin: 5px 0 0;
+  overflow: hidden;
+  color: #8b91a1;
+  font-size: 11px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-update time {
+  color: #8b91a1;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.pm-all-template {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 21px;
+}
+
+@media (max-width: 1320px) {
+  .pm-page {
+    grid-template-columns: 196px minmax(0, 1fr);
+  }
+
+  .pm-header {
+    flex-direction: column;
+  }
+
+  .pm-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .pm-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pm-right {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .pm-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pm-stat-card:nth-child(4) {
+    border-left: 0;
+  }
+
+  .pm-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .pm-page {
+    display: block;
+    overflow: visible;
+  }
+
+  .pm-sidebar {
+    min-height: auto;
+    padding: 18px;
+  }
+
+  .pm-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pm-nav-item {
+    justify-content: center;
+  }
+
+  .pm-nav-item span {
+    display: none;
+  }
+
+  .pm-profile,
+  .pm-sidebar-tools {
+    display: none;
+  }
+
+  .pm-main {
+    padding: 22px 16px;
+  }
+
+  .pm-search {
+    width: 100%;
+  }
+
+  .pm-stats,
+  .pm-card-grid,
+  .pm-right {
+    grid-template-columns: 1fr;
+  }
+
+  .pm-stat-card + .pm-stat-card,
+  .pm-stat-card:nth-child(4) {
+    border-left: 0;
+    border-top: 1px solid #eef0f6;
+  }
+
+  .pm-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pm-tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .pm-card-footer,
+  .pm-tip {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+</style>
