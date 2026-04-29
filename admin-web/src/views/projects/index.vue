@@ -1,7 +1,31 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
+import LifeModal from '@/components/life-manager/LifeModal.vue';
+import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
+import { useLifeToast } from '@/hooks/business/lifeFeedback';
+
 defineOptions({
   name: 'Projects'
 });
+
+interface ProjectItem {
+  name: string;
+  type: '游戏' | '旅行' | '学习' | '生活';
+  coverClass: string;
+  activity: string;
+  remind: string;
+  todo: string;
+  note: string;
+  file: string;
+  next: string;
+  ai: string;
+  aiState: 'done' | 'pending' | 'todo';
+  icon: string;
+  favorited: boolean;
+  archived?: boolean;
+}
+
+const { toasts, removeToast, success, info, warning } = useLifeToast();
 
 const navItems = [
   { label: '首页', icon: 'material-symbols:home-outline-rounded' },
@@ -58,11 +82,14 @@ const statCards = [
     icon: 'material-symbols:robot-2-outline-rounded',
     tone: 'mint'
   }
-];
+] as const;
 
-const filters = ['全部', '游戏', '旅行', '学习', '生活', '归档'];
+const filters = ['全部', '游戏', '旅行', '学习', '生活', '归档'] as const;
+const typeOptions = ['全部', '游戏', '旅行', '学习', '生活'] as const;
+const statusOptions = ['全部', '进行中', '待整理', '需关注'] as const;
+const sortOptions = ['最近更新', '提醒优先', '待办优先'] as const;
 
-const projects = [
+const projectItems = ref<ProjectItem[]>([
   {
     name: '无限暖暖',
     type: '游戏',
@@ -153,9 +180,43 @@ const projects = [
     icon: 'material-symbols:favorite-outline-rounded',
     favorited: false
   }
+]);
+
+const extraProjects: ProjectItem[] = [
+  {
+    name: '摄影灵感收集',
+    type: '学习',
+    coverClass: 'openai',
+    activity: '新增构图参考图 12 张',
+    remind: '2',
+    todo: '3/8',
+    note: '9',
+    file: '26',
+    next: '周末外拍计划 5月1日',
+    ai: '待生成',
+    aiState: 'todo',
+    icon: 'material-symbols:photo-camera-outline-rounded',
+    favorited: false
+  },
+  {
+    name: '年度收纳计划',
+    type: '生活',
+    coverClass: 'family',
+    activity: '卧室收纳清单已更新',
+    remind: '3',
+    todo: '4/11',
+    note: '6',
+    file: '11',
+    next: '五月整理复盘 5月30日',
+    ai: '已更新',
+    aiState: 'done',
+    icon: 'material-symbols:inventory-2-outline-rounded',
+    favorited: false,
+    archived: true
+  }
 ];
 
-const recentUpdates = [
+const recentUpdates = ref([
   {
     title: '日本旅行 2026',
     desc: '新增笔记：京都行程规划',
@@ -191,7 +252,7 @@ const recentUpdates = [
     icon: 'material-symbols:stars-outline-rounded',
     tone: 'amber'
   }
-];
+]);
 
 const templates = [
   {
@@ -218,11 +279,135 @@ const templates = [
     icon: 'material-symbols:home-outline-rounded',
     tone: 'rose'
   }
-];
+] as const;
+
+const activeFilter = ref<(typeof filters)[number]>('全部');
+const selectedType = ref<(typeof typeOptions)[number]>('全部');
+const selectedStatus = ref<(typeof statusOptions)[number]>('全部');
+const selectedSort = ref<(typeof sortOptions)[number]>('最近更新');
+const searchKeyword = ref('');
+const viewMode = ref<'card' | 'list'>('card');
+const showCreateModal = ref(false);
+const newProjectName = ref('');
+const newProjectType = ref<'游戏' | '旅行' | '学习' | '生活'>('生活');
+const loadedMore = ref(false);
+
+const visibleProjects = computed(() => {
+  let list = [...projectItems.value, ...(loadedMore.value ? extraProjects : [])];
+
+  if (activeFilter.value !== '全部') {
+    if (activeFilter.value === '归档') {
+      list = list.filter(item => item.archived);
+    } else {
+      list = list.filter(item => item.type === activeFilter.value);
+    }
+  }
+
+  if (selectedType.value !== '全部') {
+    list = list.filter(item => item.type === selectedType.value);
+  }
+
+  if (searchKeyword.value.trim()) {
+    const keyword = searchKeyword.value.trim();
+    list = list.filter(item => item.name.includes(keyword) || item.activity.includes(keyword));
+  }
+
+  if (selectedStatus.value === '需关注') {
+    list = list.filter(item => item.aiState !== 'done');
+  }
+
+  if (selectedStatus.value === '待整理') {
+    list = list.filter(item => item.todo.startsWith('3/') || item.todo.startsWith('4/'));
+  }
+
+  if (selectedSort.value === '提醒优先') {
+    list = list.sort((a, b) => Number(b.remind) - Number(a.remind));
+  }
+
+  if (selectedSort.value === '待办优先') {
+    list = list.sort((a, b) => Number(b.todo.split('/')[1]) - Number(a.todo.split('/')[1]));
+  }
+
+  return list;
+});
+
+function setFilter(filter: (typeof filters)[number]) {
+  activeFilter.value = filter;
+  info('项目分组已切换', filter);
+}
+
+function toggleFavorite(name: string) {
+  const target = projectItems.value.find(item => item.name === name) || extraProjects.find(item => item.name === name);
+  if (!target) return;
+  target.favorited = !target.favorited;
+  success(target.favorited ? '已收藏项目' : '已取消收藏', target.name);
+}
+
+function changeView(mode: 'card' | 'list') {
+  viewMode.value = mode;
+  info(mode === 'card' ? '已切换卡片视图' : '已切换列表视图');
+}
+
+function loadMoreProjects() {
+  if (loadedMore.value) {
+    info('没有更多项目啦', '演示数据已经全部展示');
+    return;
+  }
+
+  loadedMore.value = true;
+  success('已加载更多项目', '新增 2 个项目卡片');
+}
+
+function createProject() {
+  const name = newProjectName.value.trim();
+
+  if (!name) {
+    warning('请填写项目名称');
+    return;
+  }
+
+  projectItems.value.unshift({
+    name,
+    type: newProjectType.value,
+    coverClass: newProjectType.value === '旅行' ? 'japan' : newProjectType.value === '游戏' ? 'nikki' : newProjectType.value === '学习' ? 'openai' : 'family',
+    activity: '刚刚创建项目卡片',
+    remind: '1',
+    todo: '0/3',
+    note: '0',
+    file: '0',
+    next: '请补充首个提醒',
+    ai: '待生成',
+    aiState: 'todo',
+    icon:
+      newProjectType.value === '旅行'
+        ? 'material-symbols:flight-takeoff-rounded'
+        : newProjectType.value === '游戏'
+          ? 'material-symbols:stadia-controller-outline-rounded'
+          : newProjectType.value === '学习'
+            ? 'material-symbols:menu-book-outline-rounded'
+            : 'material-symbols:home-outline-rounded',
+    favorited: false
+  });
+
+  recentUpdates.value.unshift({
+    title: name,
+    desc: '新建项目成功，等待补充内容',
+    time: '刚刚',
+    icon: 'material-symbols:add-circle-outline-rounded',
+    tone: 'mint'
+  });
+
+  newProjectName.value = '';
+  newProjectType.value = '生活';
+  showCreateModal.value = false;
+  success('项目已创建', name);
+}
 </script>
 
 <template>
   <main class="pm-page">
+    <LifeToastHost :items="toasts" @close="removeToast" />
+
     <aside class="pm-sidebar">
       <div class="pm-brand">
         <div class="pm-logo"></div>
@@ -233,7 +418,7 @@ const templates = [
       </div>
 
       <nav class="pm-nav" aria-label="主导航">
-        <button v-for="item in navItems" :key="item.label" class="pm-nav-item" :class="{ active: item.active }">
+        <button v-for="item in navItems" :key="item.label" class="pm-nav-item" :class="{ active: item.active }" type="button">
           <SvgIcon :icon="item.icon" />
           <span>{{ item.label }}</span>
         </button>
@@ -257,10 +442,10 @@ const templates = [
       </div>
 
       <div class="pm-sidebar-tools">
-        <button aria-label="夜间模式"><SvgIcon icon="material-symbols:dark-mode-outline-rounded" /></button>
-        <button aria-label="通知"><SvgIcon icon="material-symbols:notifications-outline-rounded" /></button>
-        <button aria-label="帮助"><SvgIcon icon="material-symbols:help-outline-rounded" /></button>
-        <button aria-label="扩展"><SvgIcon icon="material-symbols:dashboard-customize-outline-rounded" /></button>
+        <button aria-label="夜间模式" type="button" @click="info('夜间模式演示', '这里可接入主题切换')"><SvgIcon icon="material-symbols:dark-mode-outline-rounded" /></button>
+        <button aria-label="通知" type="button" @click="info('通知中心', '你有 3 条待处理提醒')"><SvgIcon icon="material-symbols:notifications-outline-rounded" /></button>
+        <button aria-label="帮助" type="button" @click="info('帮助中心', '这里可跳转到项目使用说明')"><SvgIcon icon="material-symbols:help-outline-rounded" /></button>
+        <button aria-label="扩展" type="button" @click="info('扩展演示', '支持继续接入更多业务模块')"><SvgIcon icon="material-symbols:dashboard-customize-outline-rounded" /></button>
       </div>
     </aside>
 
@@ -273,16 +458,31 @@ const templates = [
         <div class="pm-header-actions">
           <label class="pm-search">
             <SvgIcon icon="material-symbols:search-rounded" />
-            <input placeholder="搜索项目名称或内容" />
+            <input v-model="searchKeyword" placeholder="搜索项目名称或内容" />
           </label>
-          <button class="pm-select">类型 <SvgIcon icon="material-symbols:expand-more-rounded" /></button>
-          <button class="pm-select">状态 <SvgIcon icon="material-symbols:expand-more-rounded" /></button>
-          <button class="pm-select">排序 <SvgIcon icon="material-symbols:expand-more-rounded" /></button>
-          <button class="pm-primary"><SvgIcon icon="material-symbols:add-rounded" />新建项目</button>
-          <button class="pm-icon-button has-dot" aria-label="通知">
+          <label class="pm-select pm-select-wrap">
+            <span>类型</span>
+            <select v-model="selectedType">
+              <option v-for="item in typeOptions" :key="item">{{ item }}</option>
+            </select>
+          </label>
+          <label class="pm-select pm-select-wrap">
+            <span>状态</span>
+            <select v-model="selectedStatus">
+              <option v-for="item in statusOptions" :key="item">{{ item }}</option>
+            </select>
+          </label>
+          <label class="pm-select pm-select-wrap">
+            <span>排序</span>
+            <select v-model="selectedSort">
+              <option v-for="item in sortOptions" :key="item">{{ item }}</option>
+            </select>
+          </label>
+          <button class="pm-primary" type="button" @click="showCreateModal = true"><SvgIcon icon="material-symbols:add-rounded" />新建项目</button>
+          <button class="pm-icon-button has-dot" aria-label="通知" type="button" @click="info('项目通知', '最新提醒已同步')">
             <SvgIcon icon="material-symbols:notifications-outline-rounded" />
           </button>
-          <button class="pm-user" aria-label="用户头像"></button>
+          <button class="pm-user" aria-label="用户头像" type="button" @click="info('个人中心', '这里可打开账号侧边栏')"></button>
         </div>
       </header>
 
@@ -301,19 +501,25 @@ const templates = [
         <section class="pm-projects">
           <div class="pm-toolbar">
             <div class="pm-tabs">
-              <button v-for="item in filters" :key="item" :class="{ active: item === '全部' }">{{ item }}</button>
+              <button v-for="item in filters" :key="item" :class="{ active: item === activeFilter }" type="button" @click="setFilter(item)">
+                {{ item }}
+              </button>
             </div>
             <div class="pm-view-switch">
-              <button class="active"><SvgIcon icon="material-symbols:grid-view-rounded" />卡片视图</button>
-              <button><SvgIcon icon="material-symbols:format-list-bulleted-rounded" />列表视图</button>
+              <button :class="{ active: viewMode === 'card' }" type="button" @click="changeView('card')">
+                <SvgIcon icon="material-symbols:grid-view-rounded" />卡片视图
+              </button>
+              <button :class="{ active: viewMode === 'list' }" type="button" @click="changeView('list')">
+                <SvgIcon icon="material-symbols:format-list-bulleted-rounded" />列表视图
+              </button>
             </div>
           </div>
 
-          <div class="pm-card-grid">
-            <article v-for="item in projects" :key="item.name" class="pm-project-card">
+          <div class="pm-card-grid" :class="{ 'is-list': viewMode === 'list' }">
+            <article v-for="item in visibleProjects" :key="item.name" class="pm-project-card">
               <div class="pm-cover" :class="item.coverClass">
-                <button class="pm-card-action" aria-label="收藏">
-                  <SvgIcon :icon="item.favorited ? 'material-symbols:star-rounded' : 'material-symbols:add-rounded'" />
+                <button class="pm-card-action" aria-label="收藏" type="button" @click="toggleFavorite(item.name)">
+                  <SvgIcon :icon="item.favorited ? 'material-symbols:star-rounded' : 'material-symbols:star-outline-rounded'" />
                 </button>
               </div>
               <div class="pm-card-body">
@@ -353,7 +559,7 @@ const templates = [
             </article>
           </div>
 
-          <button class="pm-load-more">加载更多项目 <SvgIcon icon="material-symbols:expand-more-rounded" /></button>
+          <button class="pm-load-more" type="button" @click="loadMoreProjects">加载更多项目 <SvgIcon icon="material-symbols:expand-more-rounded" /></button>
 
           <div class="pm-tip">
             <span><SvgIcon icon="material-symbols:shield-outline-rounded" /></span>
@@ -361,7 +567,7 @@ const templates = [
               <strong>项目是你的生活容器</strong>
               将分散在日程、清单、资产、笔记、图册、AI 等模块的内容汇聚在一起，形成完整的项目视图。
             </p>
-            <button>了解更多</button>
+            <button type="button" @click="info('项目说明', '这里可以打开项目设计文档或帮助面板')">了解更多</button>
           </div>
         </section>
 
@@ -369,7 +575,7 @@ const templates = [
           <section class="pm-panel">
             <div class="pm-panel-head">
               <h2>最近更新</h2>
-              <button>查看全部</button>
+              <button type="button" @click="info('最近更新', '这里可跳转到完整动态流')">查看全部</button>
             </div>
             <div class="pm-update-list">
               <article v-for="item in recentUpdates" :key="item.title + item.time" class="pm-update">
@@ -386,7 +592,7 @@ const templates = [
           <section class="pm-panel">
             <div class="pm-panel-head">
               <h2>项目模板</h2>
-              <button>新建模板</button>
+              <button type="button" @click="showCreateModal = true">新建模板</button>
             </div>
             <div class="pm-template-list">
               <article v-for="item in templates" :key="item.title" class="pm-template">
@@ -397,11 +603,37 @@ const templates = [
                 </div>
               </article>
             </div>
-            <button class="pm-all-template">查看全部模板 <SvgIcon icon="material-symbols:arrow-forward-rounded" /></button>
+            <button class="pm-all-template" type="button" @click="info('模板中心', '这里可管理全部模板')">
+              查看全部模板 <SvgIcon icon="material-symbols:arrow-forward-rounded" />
+            </button>
           </section>
         </aside>
       </div>
     </section>
+
+    <LifeModal
+      v-model:show="showCreateModal"
+      title="新建项目"
+      description="先补一个名字和项目类型，后续再慢慢完善内容。"
+      confirm-text="创建项目"
+      @confirm="createProject"
+    >
+      <div class="pm-demo-form">
+        <label>
+          <span>项目名称</span>
+          <input v-model="newProjectName" type="text" maxlength="24" placeholder="例如：夏日摄影计划" />
+        </label>
+        <label>
+          <span>项目类型</span>
+          <select v-model="newProjectType">
+            <option>游戏</option>
+            <option>旅行</option>
+            <option>学习</option>
+            <option>生活</option>
+          </select>
+        </label>
+      </div>
+    </LifeModal>
   </main>
 </template>
 
@@ -429,7 +661,8 @@ const templates = [
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -693,6 +926,18 @@ button {
   white-space: nowrap;
 }
 
+.pm-select-wrap {
+  position: relative;
+  gap: 8px;
+}
+
+.pm-select-wrap select {
+  border: 0;
+  background: transparent;
+  color: #343b4f;
+  outline: none;
+}
+
 .pm-primary {
   min-width: 97px;
   border: 0;
@@ -902,6 +1147,19 @@ button {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+}
+
+.pm-card-grid.is-list {
+  grid-template-columns: 1fr;
+}
+
+.pm-card-grid.is-list .pm-project-card {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+
+.pm-card-grid.is-list .pm-card-footer {
+  grid-column: 2;
 }
 
 .pm-project-card {
@@ -1336,6 +1594,32 @@ button {
   margin-top: 21px;
 }
 
+.pm-demo-form {
+  display: grid;
+  gap: 14px;
+}
+
+.pm-demo-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.pm-demo-form span {
+  color: #697183;
+  font-size: 12px;
+}
+
+.pm-demo-form input,
+.pm-demo-form select {
+  height: 38px;
+  border: 1px solid #e7e9f2;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 12px;
+  color: #1d2332;
+  outline: none;
+}
+
 @media (max-width: 1320px) {
   .pm-page {
     grid-template-columns: 196px minmax(0, 1fr);
@@ -1411,7 +1695,8 @@ button {
 
   .pm-stats,
   .pm-card-grid,
-  .pm-right {
+  .pm-right,
+  .pm-card-grid.is-list .pm-project-card {
     grid-template-columns: 1fr;
   }
 
