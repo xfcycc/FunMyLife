@@ -27,6 +27,8 @@ const showEventModal = ref(false);
 const newTodoTitle = ref('');
 const newTodoTag = ref('生活');
 const newTodoTime = ref('21:30');
+const realtimeCardRef = ref<HTMLElement | null>(null);
+const statusListRef = ref<HTMLElement | null>(null);
 
 const todos = ref<TodoItem[]>([
   { title: '完成项目文档初稿', tag: '工作', time: '10:00', done: true },
@@ -105,6 +107,7 @@ function openTodoModal() {
 
 function createTodo() {
   const title = newTodoTitle.value.trim();
+  const time = newTodoTime.value;
 
   if (!title) {
     warning('请先输入待办', '标题不能为空');
@@ -114,7 +117,7 @@ function createTodo() {
   todos.value.unshift({
     title,
     tag: newTodoTag.value,
-    time: newTodoTime.value,
+    time,
     done: false
   });
 
@@ -122,7 +125,7 @@ function createTodo() {
   newTodoTag.value = '生活';
   newTodoTime.value = '21:30';
   showTodoModal.value = false;
-  success('已添加待办', `${title} · ${newTodoTime.value}`);
+  success('已添加待办', `${title} · ${time}`);
 }
 
 function cycleSuggestion() {
@@ -161,6 +164,19 @@ function switchWeather() {
   info(weatherMode.value === 'today' ? '显示本地天气' : '切换到旅行天气卡片');
 }
 
+function scrollToRealtime() {
+  realtimeCardRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  info('已定位到实时状态', '查看最新同步与提醒');
+}
+
+function scrollStatusList(direction: 'up' | 'down') {
+  statusListRef.value?.scrollBy({
+    top: direction === 'up' ? -88 : 88,
+    behavior: 'smooth'
+  });
+  info(direction === 'up' ? '向上查看动态' : '向下查看动态');
+}
+
 function setProjectFilter(filter: '全部' | '游戏' | '旅行' | '学习') {
   projectFilter.value = filter;
   info('项目筛选已切换', filter);
@@ -188,8 +204,10 @@ function addTimelineEvent() {
           <strong>{{ currentWeatherValue }}</strong>
           <SvgIcon :icon="weatherMode === 'today' ? 'material-symbols:partly-cloudy-day-rounded' : 'material-symbols:luggage-rounded'" />
         </button>
-        <button class="lm-icon-btn" type="button" @click="showEventModal = true"><SvgIcon icon="material-symbols:search-rounded" /></button>
-        <button class="lm-icon-btn dot" type="button" @click="showEventModal = true">
+        <button class="lm-icon-btn" type="button" aria-label="搜索" @click="runQuickAction('搜索')">
+          <SvgIcon icon="material-symbols:search-rounded" />
+        </button>
+        <button class="lm-icon-btn dot" type="button" aria-label="定位实时状态" @click="scrollToRealtime">
           <SvgIcon icon="material-symbols:notifications-outline-rounded" />
         </button>
         <button class="lm-purple-btn round-only" type="button" @click="openTodoModal">
@@ -335,12 +353,20 @@ function addTimelineEvent() {
         </div>
       </article>
 
-      <article class="lm-card realtime-card">
+      <article ref="realtimeCardRef" class="lm-card realtime-card">
         <div class="lm-card-title">
           <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:sensors-rounded" /></span>实时状态（SSE）</h2>
-          <button type="button" @click="showEventModal = true">新增事件 ›</button>
+          <div class="status-actions">
+            <button class="lm-icon-btn" type="button" aria-label="向上滑动动态" @click="scrollStatusList('up')">
+              <SvgIcon icon="material-symbols:keyboard-arrow-up-rounded" />
+            </button>
+            <button class="lm-icon-btn" type="button" aria-label="向下滑动动态" @click="scrollStatusList('down')">
+              <SvgIcon icon="material-symbols:keyboard-arrow-down-rounded" />
+            </button>
+            <button type="button" @click="showEventModal = true">新增事件 ›</button>
+          </div>
         </div>
-        <div class="status-list">
+        <div ref="statusListRef" class="status-list">
           <div v-for="item in status" :key="item[0] + item[1]">
             <span></span>
             <strong>{{ item[0] }}</strong>
@@ -798,6 +824,25 @@ function addTimelineEvent() {
   grid-template-columns: 7px minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
+}
+
+.status-list {
+  max-height: 124px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scroll-behavior: smooth;
+}
+
+.status-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-actions .lm-icon-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
 }
 
 .status-list span {
