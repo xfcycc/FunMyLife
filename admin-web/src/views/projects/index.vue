@@ -182,7 +182,7 @@ const projectItems = ref<ProjectItem[]>([
   }
 ]);
 
-const extraProjects: ProjectItem[] = [
+const extraProjects = ref<ProjectItem[]>([
   {
     name: '摄影灵感收集',
     type: '学习',
@@ -214,7 +214,7 @@ const extraProjects: ProjectItem[] = [
     favorited: false,
     archived: true
   }
-];
+]);
 
 const recentUpdates = ref([
   {
@@ -288,12 +288,21 @@ const selectedSort = ref<(typeof sortOptions)[number]>('最近更新');
 const searchKeyword = ref('');
 const viewMode = ref<'card' | 'list'>('card');
 const showCreateModal = ref(false);
-const newProjectName = ref('');
-const newProjectType = ref<'游戏' | '旅行' | '学习' | '生活'>('生活');
+const editingProjectName = ref('');
+const projectFormName = ref('');
+const projectFormType = ref<'游戏' | '旅行' | '学习' | '生活'>('生活');
+const projectFormActivity = ref('');
 const loadedMore = ref(false);
+const projectListRef = ref<HTMLElement | null>(null);
+
+const projectModalTitle = computed(() => (editingProjectName.value ? '编辑项目' : '新建项目'));
+const projectModalDescription = computed(() =>
+  editingProjectName.value ? '调整项目名称、类型和最近活动。' : '先补一个名字和项目类型，后续再慢慢完善内容。'
+);
+const projectModalConfirmText = computed(() => (editingProjectName.value ? '保存项目' : '创建项目'));
 
 const visibleProjects = computed(() => {
-  let list = [...projectItems.value, ...(loadedMore.value ? extraProjects : [])];
+  let list = [...projectItems.value, ...(loadedMore.value ? extraProjects.value : [])];
 
   if (activeFilter.value !== '全部') {
     if (activeFilter.value === '归档') {
@@ -308,8 +317,12 @@ const visibleProjects = computed(() => {
   }
 
   if (searchKeyword.value.trim()) {
-    const keyword = searchKeyword.value.trim();
-    list = list.filter(item => item.name.includes(keyword) || item.activity.includes(keyword));
+    const keyword = searchKeyword.value.trim().toLowerCase();
+    list = list.filter(item => item.name.toLowerCase().includes(keyword) || item.activity.toLowerCase().includes(keyword));
+  }
+
+  if (selectedStatus.value === '进行中') {
+    list = list.filter(item => !item.archived);
   }
 
   if (selectedStatus.value === '需关注') {
@@ -336,11 +349,44 @@ function setFilter(filter: (typeof filters)[number]) {
   info('项目分组已切换', filter);
 }
 
+function notifyTypeFilter() {
+  info('类型筛选已切换', selectedType.value);
+}
+
+function notifyStatusFilter() {
+  info('状态筛选已切换', selectedStatus.value);
+}
+
+function notifySort() {
+  info('项目排序已切换', selectedSort.value);
+}
+
+function applySearch() {
+  const keyword = searchKeyword.value.trim();
+  if (!keyword) {
+    warning('请输入搜索关键词');
+    return;
+  }
+
+  info('项目搜索已应用', keyword);
+}
+
+function getProjectSource(name: string) {
+  return projectItems.value.find(item => item.name === name) || extraProjects.value.find(item => item.name === name);
+}
+
 function toggleFavorite(name: string) {
-  const target = projectItems.value.find(item => item.name === name) || extraProjects.find(item => item.name === name);
+  const target = getProjectSource(name);
   if (!target) return;
   target.favorited = !target.favorited;
   success(target.favorited ? '已收藏项目' : '已取消收藏', target.name);
+}
+
+function toggleArchive(name: string) {
+  const target = getProjectSource(name);
+  if (!target) return;
+  target.archived = !target.archived;
+  info(target.archived ? '项目已归档' : '项目已恢复', target.name);
 }
 
 function changeView(mode: 'card' | 'list') {
@@ -358,19 +404,102 @@ function loadMoreProjects() {
   success('已加载更多项目', '新增 2 个项目卡片');
 }
 
-function createProject() {
-  const name = newProjectName.value.trim();
+function scrollProjectList(direction: 'up' | 'down') {
+  projectListRef.value?.scrollBy({
+    top: direction === 'up' ? -320 : 320,
+    behavior: 'smooth'
+  });
+  info(direction === 'up' ? '向上滑动项目列表' : '向下滑动项目列表');
+}
+
+function resetProjectForm() {
+  editingProjectName.value = '';
+  projectFormName.value = '';
+  projectFormType.value = '生活';
+  projectFormActivity.value = '';
+}
+
+function openCreateModal() {
+  resetProjectForm();
+  showCreateModal.value = true;
+}
+
+function openEditModal(item: ProjectItem) {
+  editingProjectName.value = item.name;
+  projectFormName.value = item.name;
+  projectFormType.value = item.type;
+  projectFormActivity.value = item.activity;
+  showCreateModal.value = true;
+}
+
+function getProjectLook(type: ProjectItem['type']) {
+  if (type === '旅行') {
+    return {
+      coverClass: 'japan',
+      icon: 'material-symbols:flight-takeoff-rounded'
+    };
+  }
+
+  if (type === '游戏') {
+    return {
+      coverClass: 'nikki',
+      icon: 'material-symbols:stadia-controller-outline-rounded'
+    };
+  }
+
+  if (type === '学习') {
+    return {
+      coverClass: 'openai',
+      icon: 'material-symbols:menu-book-outline-rounded'
+    };
+  }
+
+  return {
+    coverClass: 'family',
+    icon: 'material-symbols:home-outline-rounded'
+  };
+}
+
+function saveProject() {
+  const name = projectFormName.value.trim();
+  const activity = projectFormActivity.value.trim() || '刚刚更新项目卡片';
 
   if (!name) {
     warning('请填写项目名称');
     return;
   }
 
+  const look = getProjectLook(projectFormType.value);
+
+  if (editingProjectName.value) {
+    const target = getProjectSource(editingProjectName.value);
+    if (!target) return;
+
+    target.name = name;
+    target.type = projectFormType.value;
+    target.activity = activity;
+    target.coverClass = look.coverClass;
+    target.icon = look.icon;
+
+    recentUpdates.value.unshift({
+      title: name,
+      desc: '项目资料已更新',
+      time: '刚刚',
+      icon: 'material-symbols:edit-note-outline-rounded',
+      tone: 'blue'
+    });
+
+    showCreateModal.value = false;
+    success('项目已保存', name);
+    resetProjectForm();
+    return;
+  }
+
   projectItems.value.unshift({
     name,
-    type: newProjectType.value,
-    coverClass: newProjectType.value === '旅行' ? 'japan' : newProjectType.value === '游戏' ? 'nikki' : newProjectType.value === '学习' ? 'openai' : 'family',
-    activity: '刚刚创建项目卡片',
+    type: projectFormType.value,
+    coverClass: look.coverClass,
+    activity,
     remind: '1',
     todo: '0/3',
     note: '0',
@@ -378,14 +507,7 @@ function createProject() {
     next: '请补充首个提醒',
     ai: '待生成',
     aiState: 'todo',
-    icon:
-      newProjectType.value === '旅行'
-        ? 'material-symbols:flight-takeoff-rounded'
-        : newProjectType.value === '游戏'
-          ? 'material-symbols:stadia-controller-outline-rounded'
-          : newProjectType.value === '学习'
-            ? 'material-symbols:menu-book-outline-rounded'
-            : 'material-symbols:home-outline-rounded',
+    icon: look.icon,
     favorited: false
   });
 
@@ -397,10 +519,9 @@ function createProject() {
     tone: 'mint'
   });
 
-  newProjectName.value = '';
-  newProjectType.value = '生活';
   showCreateModal.value = false;
   success('项目已创建', name);
+  resetProjectForm();
 }
 </script>
 
@@ -458,27 +579,27 @@ function createProject() {
         <div class="pm-header-actions">
           <label class="pm-search">
             <SvgIcon icon="material-symbols:search-rounded" />
-            <input v-model="searchKeyword" placeholder="搜索项目名称或内容" />
+            <input v-model="searchKeyword" placeholder="搜索项目名称或内容" @keyup.enter="applySearch" />
           </label>
           <label class="pm-select pm-select-wrap">
             <span>类型</span>
-            <select v-model="selectedType">
+            <select v-model="selectedType" @change="notifyTypeFilter">
               <option v-for="item in typeOptions" :key="item">{{ item }}</option>
             </select>
           </label>
           <label class="pm-select pm-select-wrap">
             <span>状态</span>
-            <select v-model="selectedStatus">
+            <select v-model="selectedStatus" @change="notifyStatusFilter">
               <option v-for="item in statusOptions" :key="item">{{ item }}</option>
             </select>
           </label>
           <label class="pm-select pm-select-wrap">
             <span>排序</span>
-            <select v-model="selectedSort">
+            <select v-model="selectedSort" @change="notifySort">
               <option v-for="item in sortOptions" :key="item">{{ item }}</option>
             </select>
           </label>
-          <button class="pm-primary" type="button" @click="showCreateModal = true"><SvgIcon icon="material-symbols:add-rounded" />新建项目</button>
+          <button class="pm-primary" type="button" @click="openCreateModal"><SvgIcon icon="material-symbols:add-rounded" />新建项目</button>
           <button class="pm-icon-button has-dot" aria-label="通知" type="button" @click="info('项目通知', '最新提醒已同步')">
             <SvgIcon icon="material-symbols:notifications-outline-rounded" />
           </button>
@@ -513,10 +634,18 @@ function createProject() {
                 <SvgIcon icon="material-symbols:format-list-bulleted-rounded" />列表视图
               </button>
             </div>
+            <div class="pm-list-scroll">
+              <button type="button" aria-label="向上滑动项目列表" @click="scrollProjectList('up')">
+                <SvgIcon icon="material-symbols:keyboard-arrow-up-rounded" />
+              </button>
+              <button type="button" aria-label="向下滑动项目列表" @click="scrollProjectList('down')">
+                <SvgIcon icon="material-symbols:keyboard-arrow-down-rounded" />
+              </button>
+            </div>
           </div>
 
-          <div class="pm-card-grid" :class="{ 'is-list': viewMode === 'list' }">
-            <article v-for="item in visibleProjects" :key="item.name" class="pm-project-card">
+          <div ref="projectListRef" class="pm-card-grid" :class="{ 'is-list': viewMode === 'list' }">
+            <article v-for="item in visibleProjects" :key="item.name" class="pm-project-card" :class="{ archived: item.archived }">
               <div class="pm-cover" :class="item.coverClass">
                 <button class="pm-card-action" aria-label="收藏" type="button" @click="toggleFavorite(item.name)">
                   <SvgIcon :icon="item.favorited ? 'material-symbols:star-rounded' : 'material-symbols:star-outline-rounded'" />
@@ -527,6 +656,7 @@ function createProject() {
                   <span class="pm-project-icon"><SvgIcon :icon="item.icon" /></span>
                   <h2>{{ item.name }}</h2>
                   <span class="pm-type">{{ item.type }}</span>
+                  <span v-if="item.archived" class="pm-archive-badge">归档</span>
                 </div>
                 <p class="pm-activity">最近活动：{{ item.activity }}</p>
                 <div class="pm-metrics">
@@ -556,6 +686,12 @@ function createProject() {
                 <span>下次提醒：{{ item.next }}</span>
                 <span class="pm-ai" :class="item.aiState"><i></i>AI 总结：{{ item.ai }}</span>
               </footer>
+              <div class="pm-card-actions">
+                <button type="button" @click="openEditModal(item)">编辑</button>
+                <button type="button" :class="{ active: item.archived }" @click="toggleArchive(item.name)">
+                  {{ item.archived ? '恢复项目' : '归档项目' }}
+                </button>
+              </div>
             </article>
           </div>
 
@@ -592,7 +728,7 @@ function createProject() {
           <section class="pm-panel">
             <div class="pm-panel-head">
               <h2>项目模板</h2>
-              <button type="button" @click="showCreateModal = true">新建模板</button>
+              <button type="button" @click="openCreateModal">新建模板</button>
             </div>
             <div class="pm-template-list">
               <article v-for="item in templates" :key="item.title" class="pm-template">
@@ -613,24 +749,28 @@ function createProject() {
 
     <LifeModal
       v-model:show="showCreateModal"
-      title="新建项目"
-      description="先补一个名字和项目类型，后续再慢慢完善内容。"
-      confirm-text="创建项目"
-      @confirm="createProject"
+      :title="projectModalTitle"
+      :description="projectModalDescription"
+      :confirm-text="projectModalConfirmText"
+      @confirm="saveProject"
     >
       <div class="pm-demo-form">
         <label>
           <span>项目名称</span>
-          <input v-model="newProjectName" type="text" maxlength="24" placeholder="例如：夏日摄影计划" />
+          <input v-model="projectFormName" type="text" maxlength="24" placeholder="例如：夏日摄影计划" />
         </label>
         <label>
           <span>项目类型</span>
-          <select v-model="newProjectType">
+          <select v-model="projectFormType">
             <option>游戏</option>
             <option>旅行</option>
             <option>学习</option>
             <option>生活</option>
           </select>
+        </label>
+        <label>
+          <span>最近活动</span>
+          <input v-model="projectFormActivity" type="text" maxlength="36" placeholder="例如：完成资料整理" />
         </label>
       </div>
     </LifeModal>
@@ -1143,10 +1283,33 @@ button {
   color: #6d55de;
 }
 
+.pm-list-scroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-list-scroll button {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border: 1px solid #edf0f6;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #735ce8;
+  font-size: 20px;
+  box-shadow: 0 8px 18px rgba(60, 65, 96, 0.04);
+}
+
 .pm-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+  max-height: 642px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scroll-behavior: smooth;
 }
 
 .pm-card-grid.is-list {
@@ -1162,6 +1325,10 @@ button {
   grid-column: 2;
 }
 
+.pm-card-grid.is-list .pm-card-actions {
+  grid-column: 2;
+}
+
 .pm-project-card {
   overflow: hidden;
   min-width: 0;
@@ -1169,6 +1336,11 @@ button {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 13px 30px rgba(60, 67, 100, 0.1);
+}
+
+.pm-project-card.archived {
+  border-color: #dde2ee;
+  background: rgba(247, 248, 252, 0.94);
 }
 
 .pm-cover {
@@ -1368,10 +1540,21 @@ button {
   font-size: 11px;
 }
 
+.pm-archive-badge {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #f1f3f8;
+  color: #7e8494;
+  font-size: 11px;
+}
+
 .pm-activity {
   margin: 9px 0 14px;
   color: #6c7282;
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1432,6 +1615,29 @@ button {
 
 .pm-ai.todo i {
   background: #ef5b84;
+}
+
+.pm-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 13px 13px;
+}
+
+.pm-card-actions button {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid #e6e9f2;
+  border-radius: 8px;
+  background: #fff;
+  color: #61697b;
+  font-size: 12px;
+}
+
+.pm-card-actions button.active {
+  border-color: #ded7ff;
+  background: #f3efff;
+  color: #735ce8;
 }
 
 .pm-load-more {
