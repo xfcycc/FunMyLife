@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { RouteKey } from '@elegant-router/types';
-import { useRoute } from 'vue-router';
+import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
 import { useRouterPush } from '@/hooks/common/router';
@@ -28,27 +27,8 @@ interface ProjectItem {
   archived?: boolean;
 }
 
-interface NavItem {
-  label: string;
-  icon: string;
-  routeKey?: RouteKey;
-}
-
 const { toasts, removeToast, success, info, warning } = useLifeToast();
-const route = useRoute();
 const { routerPushByKey } = useRouterPush();
-
-const navItems = [
-  { label: '首页', icon: 'material-symbols:home-outline-rounded', routeKey: 'home' },
-  { label: '项目', icon: 'material-symbols:calendar-month-outline-rounded', routeKey: 'projects' },
-  { label: '日程', icon: 'material-symbols:calendar-today-outline-rounded' },
-  { label: '清单', icon: 'material-symbols:select-check-box-outline-rounded' },
-  { label: '记录', icon: 'material-symbols:edit-square-outline-rounded' },
-  { label: '资产', icon: 'material-symbols:inventory-2-outline-rounded' },
-  { label: 'AI 助手', icon: 'material-symbols:smart-toy-outline-rounded' },
-  { label: '数据统计', icon: 'material-symbols:donut-large-outline-rounded' },
-  { label: '设置', icon: 'material-symbols:settings-outline-rounded' }
-] satisfies NavItem[];
 
 const statCards = [
   {
@@ -386,26 +366,8 @@ function getProjectSource(name: string) {
   return projectItems.value.find(item => item.name === name) || extraProjects.value.find(item => item.name === name);
 }
 
-function navigateByRouteKey(routeKey?: RouteKey) {
-  if (!routeKey) return;
-  routerPushByKey(routeKey);
-}
-
-function getUnavailableHint(label: string) {
-  return lifeUnavailableFeedback.hint(label);
-}
-
 function showUnavailable(label: string) {
   info(lifeUnavailableFeedback.title, lifeUnavailableFeedback.message(label));
-}
-
-function isNavItemActive(item: NavItem) {
-  const path = route.path;
-
-  if (item.routeKey === 'home') return path === '/life/home';
-  if (item.routeKey === 'projects') return path === '/life/projects' || path.startsWith('/life/project/');
-
-  return false;
 }
 
 const projectRouteKeyMap = {
@@ -599,61 +561,10 @@ function saveProject() {
 </script>
 
 <template>
-  <main class="pm-page">
+  <LifeAppShell active="项目">
     <LifeToastHost :items="toasts" @close="removeToast" />
 
-    <aside class="pm-sidebar">
-      <div class="pm-brand">
-        <div class="pm-logo"></div>
-        <div>
-          <strong>Life Manager</strong>
-          <span>你的生活，由你掌控</span>
-        </div>
-      </div>
-
-      <nav class="pm-nav" aria-label="主导航">
-        <button
-          v-for="item in navItems"
-          :key="item.label"
-          class="pm-nav-item"
-          :class="{ active: isNavItemActive(item) }"
-          :disabled="!item.routeKey"
-          :title="!item.routeKey ? getUnavailableHint(item.label) : undefined"
-          :aria-label="!item.routeKey ? getUnavailableHint(item.label) : item.label"
-          type="button"
-          @click="navigateByRouteKey(item.routeKey)"
-        >
-          <SvgIcon :icon="item.icon" />
-          <span>{{ item.label }}</span>
-        </button>
-      </nav>
-
-      <div class="pm-profile">
-        <div class="pm-profile-main">
-          <div class="pm-avatar"></div>
-          <div>
-            <strong>夏目悠然 <span>Pro</span></strong>
-            <p>专注生活的每一天 ✨</p>
-          </div>
-        </div>
-        <div class="pm-energy">
-          <div>
-            <span>今日能量</span>
-            <strong>87 / 100</strong>
-          </div>
-          <div class="pm-energy-bar"><i></i></div>
-        </div>
-      </div>
-
-      <div class="pm-sidebar-tools">
-        <button aria-label="夜间模式" type="button" @click="showUnavailable('夜间模式')"><SvgIcon icon="material-symbols:dark-mode-outline-rounded" /></button>
-        <button aria-label="通知" type="button" @click="showUnavailable('通知中心')"><SvgIcon icon="material-symbols:notifications-outline-rounded" /></button>
-        <button aria-label="帮助" type="button" @click="showUnavailable('帮助中心')"><SvgIcon icon="material-symbols:help-outline-rounded" /></button>
-        <button aria-label="扩展" type="button" @click="showUnavailable('扩展中心')"><SvgIcon icon="material-symbols:dashboard-customize-outline-rounded" /></button>
-      </div>
-    </aside>
-
-    <section class="pm-main">
+    <main class="pm-page">
       <header class="pm-header">
         <div>
           <h1>项目管理</h1>
@@ -840,7 +751,7 @@ function saveProject() {
           </section>
         </aside>
       </div>
-    </section>
+    </main>
 
     <LifeModal
       v-model:show="showCreateModal"
@@ -869,14 +780,12 @@ function saveProject() {
         </label>
       </div>
     </LifeModal>
-  </main>
+  </LifeAppShell>
 </template>
 
 <style scoped>
 .pm-page {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 216px minmax(0, 1fr);
+  min-height: calc(100vh - 38px);
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(248, 249, 254, 0.92)),
@@ -906,189 +815,12 @@ button {
   cursor: pointer;
 }
 
-.pm-sidebar {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  padding: 32px 14px 18px;
-  border-right: 1px solid #e9ebf4;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 10px 0 35px rgba(42, 47, 78, 0.03);
-}
-
-.pm-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 0 14px 34px;
-}
-
-.pm-logo {
-  width: 28px;
-  height: 28px;
-  transform: rotate(45deg);
-  border-radius: 4px;
-  background: linear-gradient(135deg, #a69bff 0%, #6d56e8 54%, #4e39d2 100%);
-  box-shadow: 0 10px 22px rgba(111, 90, 232, 0.28);
-}
-
-.pm-brand strong {
-  display: block;
-  font-size: 17px;
-  line-height: 1.15;
-  color: #101422;
-}
-
-.pm-brand span {
-  display: block;
-  margin-top: 7px;
-  font-size: 11px;
-  color: #8c91a3;
-}
-
-.pm-nav {
-  display: grid;
-  gap: 5px;
-}
-
-.pm-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  height: 32px;
-  padding: 0 9px;
-  border-radius: 6px;
-  background: transparent;
-  color: #4c5366;
-  font-size: 12px;
-  text-align: left;
-}
-
-.pm-nav-item .svg-icon {
-  width: 15px;
-  height: 15px;
-  color: #5b6476;
-}
-
-.pm-nav-item.active {
-  background: linear-gradient(135deg, #7259ee, #7c5dfa);
-  color: #fff;
-  box-shadow: 0 12px 24px rgba(111, 82, 234, 0.32);
-}
-
-.pm-nav-item.active .svg-icon {
-  color: #fff;
-}
-
-.pm-nav-item:disabled:not(.active) {
-  cursor: not-allowed;
-  opacity: 0.46;
-}
-
-.pm-profile {
-  margin-top: auto;
-  padding: 0 6px 18px;
-}
-
-.pm-profile-main {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 18px;
-}
-
-.pm-avatar,
 .pm-user {
   background:
     radial-gradient(circle at 52% 36%, #ffd9de 0 12%, transparent 13%),
     radial-gradient(circle at 47% 30%, #221e36 0 15%, transparent 16%),
     radial-gradient(circle at 50% 62%, #f5b2c3 0 19%, transparent 20%),
     linear-gradient(135deg, #c7b6ff, #ffd0df);
-}
-
-.pm-avatar {
-  width: 42px;
-  height: 42px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  box-shadow: 0 9px 20px rgba(116, 98, 190, 0.22);
-}
-
-.pm-profile-main strong {
-  display: block;
-  color: #34384a;
-  font-size: 13px;
-}
-
-.pm-profile-main strong span {
-  margin-left: 4px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: #7861ef;
-  color: #fff;
-  font-size: 9px;
-}
-
-.pm-profile-main p {
-  margin: 5px 0 0;
-  color: #8a8fa1;
-  font-size: 11px;
-}
-
-.pm-energy {
-  border-top: 1px solid #edf0f7;
-  padding: 12px 2px 0;
-}
-
-.pm-energy div:first-child {
-  display: flex;
-  justify-content: space-between;
-  color: #8a8fa1;
-  font-size: 11px;
-}
-
-.pm-energy strong {
-  color: #4f5365;
-}
-
-.pm-energy-bar {
-  height: 7px;
-  margin-top: 10px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #edf0fa;
-}
-
-.pm-energy-bar i {
-  display: block;
-  width: 87%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #8564ef, #7756e7);
-}
-
-.pm-sidebar-tools {
-  display: flex;
-  justify-content: space-between;
-  padding: 14px 8px 0;
-  border-top: 1px solid #edf0f7;
-}
-
-.pm-sidebar-tools button {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: transparent;
-  color: #687084;
-}
-
-.pm-main {
-  min-width: 0;
-  min-height: 100vh;
-  padding: 31px 28px 14px 27px;
 }
 
 .pm-header {
@@ -1927,10 +1659,6 @@ button {
 }
 
 @media (max-width: 1320px) {
-  .pm-page {
-    grid-template-columns: 196px minmax(0, 1fr);
-  }
-
   .pm-header {
     flex-direction: column;
   }
@@ -1965,34 +1693,7 @@ button {
 
 @media (max-width: 820px) {
   .pm-page {
-    display: block;
     overflow: visible;
-  }
-
-  .pm-sidebar {
-    min-height: auto;
-    padding: 18px;
-  }
-
-  .pm-nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .pm-nav-item {
-    justify-content: center;
-  }
-
-  .pm-nav-item span {
-    display: none;
-  }
-
-  .pm-profile,
-  .pm-sidebar-tools {
-    display: none;
-  }
-
-  .pm-main {
-    padding: 22px 16px;
   }
 
   .pm-search {
