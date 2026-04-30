@@ -317,6 +317,35 @@
   padding: 15px;
 }
 
+.lm-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lm-card :where(p, li, span, strong, em, button) {
+  min-width: 0;
+}
+
+.lm-card-scroll {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+.lm-card-empty {
+  display: grid;
+  min-height: 96px;
+  place-items: center;
+  border: 1px dashed #e4e7f1;
+  border-radius: 8px;
+  background: #fafbff;
+  color: #8d94a5;
+  font-size: 12px;
+  text-align: center;
+}
+
 .lm-card-title {
   display: flex;
   align-items: center;
@@ -360,8 +389,31 @@
 
 .lm-grid {
   display: grid;
+  align-items: start;
   gap: 14px;
 }
+
+.lm-grid > .lm-card {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--lm-card-min-height, 214px);
+  max-height: var(--lm-card-max-height, 360px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+.lm-grid > .lm-card > .lm-card-title {
+  flex: 0 0 auto;
+}
+
+/*
+ * Stable card primitive:
+ * - Long lists/text scroll inside the card instead of expanding grid rows.
+ * - Future async overflow loading and "view all" mask modal should attach here.
+ */
 
 .lm-grid.cols-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -841,5 +893,10 @@
   .lm-grid.cols-5,
   .lm-grid.cols-6 {
     grid-template-columns: 1fr;
+  }
+
+  .lm-grid > .lm-card {
+    max-height: none;
+    overflow: visible;
   }
 }
