@@ -222,33 +222,32 @@ function scrollList(target: 'route' | 'photo' | 'activity', direction: 'left' | 
 </script>
 
 <template>
-  <LifeAppShell active="日本旅行 2026" show-projects>
+  <LifeAppShell
+    active="日本旅行 2026"
+    show-projects
+    title="日本旅行 2026"
+    description="东京 · 京都 · 大阪 · 奈良 · 富士山｜2026.06.15 - 2026.06.26（共 12 天）"
+    :breadcrumbs="[{ label: '首页', routeKey: 'home' }, { label: '项目', routeKey: 'projects' }, { label: '日本旅行 2026' }]"
+  >
     <LifeToastHost :items="toasts" @close="removeToast" />
 
-    <header class="travel-head lm-topbar">
-      <div class="breadcrumb">← 日本旅行 2026 <span>旅行</span> ★</div>
-      <div class="lm-actions">
-        <button class="lm-plain-btn" type="button" @click="success('分享链接已生成', '日本旅行 2026')">
-          <SvgIcon icon="material-symbols:ios-share-rounded" />分享
-        </button>
-        <button
-          class="lm-plain-btn"
-          type="button"
-          @click="openManagePage"
-        >
-          <SvgIcon icon="material-symbols:edit-outline-rounded" />编辑
-        </button>
-        <button class="lm-purple-btn" type="button" @click="openDetail('checklist', '新建旅行事项', '新增行程、清单、预算或笔记的演示入口。', [`当前清单：${checklistDoneCount}/${checklist.length}`])">
-          <SvgIcon icon="material-symbols:add-box-outline-rounded" />新建
-        </button>
-        <button class="lm-icon-btn" type="button" aria-label="查看提醒" @click="scrollList('route', 'down')">
-          <SvgIcon icon="material-symbols:notifications-outline-rounded" />
-        </button>
-        <button class="lm-icon-btn" type="button" aria-label="更多操作" @click="scrollList('activity', 'right')">
-          <SvgIcon icon="material-symbols:more-horiz-rounded" />
-        </button>
-      </div>
-    </header>
+    <template #actions>
+      <button class="lm-plain-btn" type="button" @click="success('分享链接已生成', '日本旅行 2026')">
+        <SvgIcon icon="material-symbols:ios-share-rounded" />分享
+      </button>
+      <button class="lm-plain-btn" type="button" @click="openManagePage">
+        <SvgIcon icon="material-symbols:edit-outline-rounded" />编辑
+      </button>
+      <button class="lm-purple-btn" type="button" @click="openDetail('checklist', '新建旅行事项', '新增行程、清单、预算或笔记的演示入口。', [`当前清单：${checklistDoneCount}/${checklist.length}`])">
+        <SvgIcon icon="material-symbols:add-box-outline-rounded" />新建
+      </button>
+      <button class="lm-icon-btn" type="button" aria-label="查看提醒" @click="scrollList('route', 'down')">
+        <SvgIcon icon="material-symbols:notifications-outline-rounded" />
+      </button>
+      <button class="lm-icon-btn" type="button" aria-label="更多操作" @click="scrollList('activity', 'right')">
+        <SvgIcon icon="material-symbols:more-horiz-rounded" />
+      </button>
+    </template>
 
     <section class="travel-hero lm-hero-art japan">
       <div class="hero-copy">
@@ -501,25 +500,6 @@ function scrollList(target: 'route' | 'photo' | 'activity', direction: 'left' | 
 </template>
 
 <style scoped>
-.travel-head {
-  margin-bottom: 8px;
-}
-
-.breadcrumb {
-  color: #151927;
-  font-size: 17px;
-  font-weight: 800;
-}
-
-.breadcrumb span {
-  margin-left: 8px;
-  padding: 2px 7px;
-  border-radius: 5px;
-  background: #ffedf4;
-  color: #e56b93;
-  font-size: 10px;
-}
-
 .travel-hero {
   height: 181px;
   border-radius: 8px;
