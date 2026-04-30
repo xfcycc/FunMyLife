@@ -81,7 +81,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   },
   {
     name: 'home',
-    path: '/home',
+    path: '/life/home',
     component: 'layout.blank$view.home',
     meta: {
       title: 'Life Manager',
@@ -106,7 +106,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   },
   {
     name: 'infinity-nikki',
-    path: '/infinity-nikki',
+    path: '/life/project/infinity-nikki',
     component: 'layout.blank$view.infinity-nikki',
     meta: {
       title: '无限暖暖',
@@ -118,7 +118,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   },
   {
     name: 'infinity-nikki-manage',
-    path: '/infinity-nikki-manage',
+    path: '/life/project/infinity-nikki/manage',
     component: 'layout.blank$view.infinity-nikki-manage',
     meta: {
       title: '无限暖暖管理',
@@ -130,7 +130,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   },
   {
     name: 'japan-travel',
-    path: '/japan-travel',
+    path: '/life/project/japan-travel',
     component: 'layout.blank$view.japan-travel',
     meta: {
       title: '日本旅行 2026',
@@ -142,7 +142,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   },
   {
     name: 'japan-travel-manage',
-    path: '/japan-travel-manage',
+    path: '/life/project/japan-travel/manage',
     component: 'layout.blank$view.japan-travel-manage',
     meta: {
       title: '日本旅行管理',
@@ -213,7 +213,7 @@ export const generatedRoutes: GeneratedRoute[] = [
   },
   {
     name: 'projects',
-    path: '/projects',
+    path: '/life/projects',
     component: 'layout.blank$view.projects',
     meta: {
       title: '项目管理',

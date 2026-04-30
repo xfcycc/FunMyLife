@@ -2,10 +2,12 @@ import type { CustomRoute } from '@elegant-router/types';
 import { layouts, views } from '../elegant/imports';
 import { getRoutePath, transformElegantRoutesToVueRoutes } from '../elegant/transform';
 
+export const LIFE_HOME_PATH = '/life/home';
+
 export const ROOT_ROUTE: CustomRoute = {
   name: 'root',
   path: '/',
-  redirect: import.meta.env.VITE_ROUTE_HOME === 'home' ? '/life' : getRoutePath(import.meta.env.VITE_ROUTE_HOME) || '/life',
+  redirect: getRoutePath(import.meta.env.VITE_ROUTE_HOME) || LIFE_HOME_PATH,
   meta: {
     title: 'root',
     constant: true

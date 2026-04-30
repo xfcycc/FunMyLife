@@ -33,12 +33,21 @@ export function createStaticRoutes() {
 const dynamicConstantRoutes = [
   {
     name: 'home',
-    path: '/life',
+    path: '/life/home',
     component: 'layout.blank$view.home',
     meta: {
       title: 'Life Manager',
       icon: 'material-symbols:dashboard-customize-outline-rounded',
       order: 10,
+      hideInMenu: true
+    }
+  },
+  {
+    name: 'life-legacy',
+    path: '/life',
+    redirect: '/life/home',
+    meta: {
+      title: 'Life Manager',
       hideInMenu: true
     }
   },

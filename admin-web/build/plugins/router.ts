@@ -13,6 +13,18 @@ export function setupElegantRouter() {
     },
     routePathTransformer(routeName, routePath) {
       const key = routeName as RouteKey;
+      const lifeRoutePathMap: Partial<Record<RouteKey, string>> = {
+        home: '/life/home',
+        projects: '/life/projects',
+        'infinity-nikki': '/life/project/infinity-nikki',
+        'infinity-nikki-manage': '/life/project/infinity-nikki/manage',
+        'japan-travel': '/life/project/japan-travel',
+        'japan-travel-manage': '/life/project/japan-travel/manage'
+      };
+
+      if (lifeRoutePathMap[key]) {
+        return lifeRoutePathMap[key];
+      }
 
       if (key === 'login') {
         const modules: UnionKey.LoginModule[] = ['pwd-login', 'code-login', 'register', 'reset-pwd', 'bind-wechat'];
