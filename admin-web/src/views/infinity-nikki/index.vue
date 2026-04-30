@@ -1,5 +1,13 @@
 <template>
-  <LifeGeminiShell>
+  <LifeGeminiShell
+    title="无限暖暖"
+    description="项目概览、日常进度、活动倒计时和最近动态。"
+    :breadcrumbs="[
+      { label: '首页', routeKey: 'home' },
+      { label: '项目', routeKey: 'projects' },
+      { label: '无限暖暖' }
+    ]"
+  >
     <LifeGeminiProjectHero
       title="无限暖暖"
       description="收集美好的瞬间，搭配无限的可能"
@@ -221,7 +229,7 @@
             <MoreVertical :size="14" class="text-slate-400" />
           </button>
         </template>
-        <div class="relative h-full flex flex-col justify-between">
+        <div class="h-full min-h-48 flex flex-col justify-between overflow-hidden">
           <ul class="space-y-2 text-xs text-slate-600 relative z-10">
             <li class="flex items-start">
               <span class="text-indigo-500 mr-1.5 mt-0.5">•</span>
@@ -241,12 +249,12 @@
             </li>
           </ul>
 
-          <div class="mt-4 flex justify-between items-end relative z-10">
-            <button class="appearance-none bg-transparent border-0 p-0 text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center" type="button">
+          <div class="mt-4 flex items-end justify-between gap-4">
+            <button class="appearance-none bg-transparent border-0 p-0 text-xs font-medium text-indigo-600 hover:text-indigo-700 flex min-w-0 items-center" type="button">
               查看完整分析报告 <ChevronRight :size="12" class="ml-0.5" />
             </button>
 
-            <div class="w-16 h-16 absolute right-0 bottom-[-10px] opacity-90 drop-shadow-md">
+            <div class="w-14 h-14 shrink-0 opacity-90 drop-shadow-md">
               <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="25" y="30" width="50" height="45" rx="15" fill="#818cf8" />
                 <rect x="35" y="45" width="10" height="8" rx="4" fill="white" />

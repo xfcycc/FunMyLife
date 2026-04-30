@@ -1,398 +1,265 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
+import LifeGeminiCard from '@/components/life-manager/LifeGeminiCard.vue';
+import LifeGeminiProjectHero from '@/components/life-manager/LifeGeminiProjectHero.vue';
+import LifeGeminiShell from '@/components/life-manager/LifeGeminiShell.vue';
+import LifeGeminiTabs from '@/components/life-manager/LifeGeminiTabs.vue';
+import LifeGeminiTopActions from '@/components/life-manager/LifeGeminiTopActions.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
-import { useRouterPush } from '@/hooks/common/router';
+import type { LifeGeminiProjectStat, LifeGeminiProjectTag } from '@/components/life-manager/types';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
+import { useRouterPush } from '@/hooks/common/router';
 
 defineOptions({
   name: 'InfinityNikkiManage'
 });
 
 type TabLabel = '基础信息' | '日常模板' | '提醒规则' | '资产关联' | '图册同步' | 'AI 设置';
-type ManageSection = '基础配置' | '日常任务' | '素材分区' | '提醒规则';
-type ModalMode = 'create' | 'edit' | 'delete';
-type ModalTarget = 'reminder' | 'template' | 'asset' | 'material' | 'integration';
+type Tone = 'indigo' | 'orange' | 'rose' | 'amber' | 'emerald' | 'purple' | 'blue' | 'slate' | 'pink';
 
-interface TabItem {
-  label: TabLabel;
+interface StatItem {
+  label: string;
+  value: string;
   icon: string;
+  tone: Tone;
 }
 
-interface ManageItem {
-  id: number;
-  name: string;
+interface ReminderRule {
+  title: string;
   desc: string;
-  enabled: boolean;
-  selected: boolean;
-}
-
-interface ReminderRule extends ManageItem {
-  advance: string;
-}
-
-interface TaskTemplate extends ManageItem {
-  cycle: '每日' | '每周';
-  resetAt: string;
-}
-
-interface AssetItem extends ManageItem {
-  status: string;
-}
-
-interface MaterialGroup extends ManageItem {
-  count: number;
-}
-
-interface IntegrationItem extends ManageItem {
   icon: string;
+  tone: Tone;
+  enabled: boolean;
 }
 
-interface ManageModalState {
-  show: boolean;
-  mode: ModalMode;
-  target: ModalTarget;
-  id: number | null;
+interface TaskTemplate {
+  title: string;
+  desc: string;
+  cycle: '每日' | '每周';
+  reset: string;
+  icon: string;
+  tone: Tone;
+}
+
+interface AssetItem {
+  name: string;
+  tag?: string;
+  status: string;
+  avatar: string;
+}
+
+interface AiSetting {
+  title: string;
+  desc: string;
+  active: boolean;
+}
+
+interface IntegrationItem {
+  name: string;
+  icon: string;
+  tone: Tone;
+  status: string;
 }
 
 const { toasts, removeToast, success, info, warning } = useLifeToast();
 const { routerPushByKey } = useRouterPush();
 
-function backToProject() {
-  routerPushByKey('infinity-nikki');
-}
-
-const tabs = [
-  { label: '基础信息', icon: 'material-symbols:info-outline-rounded' },
-  { label: '日常模板', icon: 'material-symbols:calendar-month-outline-rounded' },
-  { label: '提醒规则', icon: 'material-symbols:notifications-outline-rounded' },
-  { label: '资产关联', icon: 'material-symbols:inventory-2-outline-rounded' },
-  { label: '图册同步', icon: 'material-symbols:photo-library-outline-rounded' },
-  { label: 'AI 设置', icon: 'material-symbols:auto-awesome-rounded' }
-] satisfies TabItem[];
-
-const sectionOptions = ['基础配置', '日常任务', '素材分区', '提醒规则'] as const;
-const resetOptions = ['04:00', '05:00', '10:00'] as const;
-
+const coverUrl = 'https://images.unsplash.com/photo-1614088921132-15949673da0e?auto=format&fit=crop&w=360&q=80';
 const activeTab = ref<TabLabel>('基础信息');
-const activeSection = ref<ManageSection>('基础配置');
-const projectEnabled = ref(true);
-const resetTime = ref<(typeof resetOptions)[number]>('04:00');
-const remindAdvance = ref('提前 1 天　09:00');
+const dailyResetAt = ref('04:00');
+const weeklyResetDay = ref('一');
+const versionReminder = ref('提前 1 天 09:00');
 const syncEnabled = ref(true);
 const syncRunning = ref(false);
-const ruleListRef = ref<HTMLElement | null>(null);
-const templateListRef = ref<HTMLElement | null>(null);
-const materialListRef = ref<HTMLElement | null>(null);
+const modalShow = ref(false);
+const modalTitle = ref('新建配置');
+const modalDescription = ref('当前为演示配置流程，后续可接入真实表单与接口。');
 
-const modal = ref<ManageModalState>({
-  show: false,
-  mode: 'create',
-  target: 'template',
-  id: null
-});
-const formName = ref('');
-const formDesc = ref('');
-const formCycle = ref<'每日' | '每周'>('每日');
+const tabs = ['基础信息', '日常模板', '提醒规则', '资产关联', '图册同步', 'AI 设置'] satisfies TabLabel[];
 
-const weekdays = ref([
-  { label: '一', active: true },
-  { label: '二', active: true },
-  { label: '三', active: true },
-  { label: '四', active: true },
-  { label: '五', active: true },
-  { label: '六', active: false },
-  { label: '日', active: false }
+const projectTags: LifeGeminiProjectTag[] = [
+  { label: '游戏项目' },
+  { label: '进行中', tone: 'success' }
+];
+
+const metaInfo = [
+  { label: '创建时间', value: '2025-04-10' },
+  { label: '开始时间', value: '2024-12-05' },
+  { label: '类型', value: '游戏' },
+  { label: '时区', value: 'Asia/Shanghai' },
+  { label: '备注', value: '编辑备注', action: true }
+];
+
+const reminders = ref<ReminderRule[]>([
+  {
+    title: '活动结束提醒',
+    desc: '活动结束前 3 天、1 天提醒',
+    icon: 'material-symbols:event-busy-outline-rounded',
+    tone: 'indigo',
+    enabled: true
+  },
+  {
+    title: '直播开始提醒',
+    desc: '直播开始前 15 分钟提醒',
+    icon: 'material-symbols:videocam-outline-rounded',
+    tone: 'purple',
+    enabled: true
+  },
+  {
+    title: '版本维护提醒',
+    desc: '维护开始前 1 小时提醒',
+    icon: 'material-symbols:construction-rounded',
+    tone: 'blue',
+    enabled: true
+  },
+  {
+    title: '体力/资源溢出提醒',
+    desc: '体力即将溢出时提醒（自定义阈值）',
+    icon: 'material-symbols:battery-charging-60-outline-rounded',
+    tone: 'emerald',
+    enabled: true
+  }
 ]);
 
-const reminderRules = ref<ReminderRule[]>([
-  { id: 1, name: '活动结束提醒', desc: '活动结束前推送奖励清单', advance: '提前 1 天', enabled: true, selected: true },
-  { id: 2, name: '直播开始提醒', desc: '前瞻直播开播前提醒', advance: '提前 30 分钟', enabled: true, selected: false },
-  { id: 3, name: '版本维护提醒', desc: '维护前提醒清体力与领取邮件', advance: '提前 1 天', enabled: true, selected: false },
-  { id: 4, name: '体力/资源溢出提醒', desc: '资源接近上限时推送', advance: '提前 2 小时', enabled: false, selected: false }
-]);
-
-const taskTemplates = ref<TaskTemplate[]>([
-  { id: 1, name: '每日基础任务', desc: '签到、活跃与日常奖励', cycle: '每日', resetAt: '每日 04:00', enabled: true, selected: true },
-  { id: 2, name: '采集与材料收集', desc: '花愿镇路线与素材清单', cycle: '每日', resetAt: '每日 04:00', enabled: true, selected: false },
-  { id: 3, name: '挑战关卡', desc: '梦境、搭配竞技与评分复盘', cycle: '每日', resetAt: '每日 04:00', enabled: true, selected: false },
-  { id: 4, name: '周常任务', desc: '周常挑战与奖励兑换', cycle: '每周', resetAt: '每周一 04:00', enabled: true, selected: false }
+const dailyTasks = ref<TaskTemplate[]>([
+  {
+    title: '每日基础任务',
+    desc: '完成日常活跃、领取奖励等',
+    cycle: '每日',
+    reset: '每日 04:00',
+    icon: 'material-symbols:my-location-outline-rounded',
+    tone: 'rose'
+  },
+  {
+    title: '采集与材料收集',
+    desc: '采集、材料、鱼类等',
+    cycle: '每日',
+    reset: '每日 04:00',
+    icon: 'material-symbols:psychiatry-outline-rounded',
+    tone: 'emerald'
+  },
+  {
+    title: '挑战关卡',
+    desc: '主线/支线/秘境挑战等',
+    cycle: '每日',
+    reset: '每日 04:00',
+    icon: 'material-symbols:swords-outline-rounded',
+    tone: 'amber'
+  },
+  {
+    title: '周常任务',
+    desc: '周常挑战、周活跃等',
+    cycle: '每周',
+    reset: '每周一 04:00',
+    icon: 'material-symbols:calendar-month-outline-rounded',
+    tone: 'purple'
+  }
 ]);
 
 const assets = ref<AssetItem[]>([
-  { id: 1, name: '主账号（国服）', desc: '官方账号与通行证', status: '已绑定', enabled: true, selected: true },
-  { id: 2, name: '攻略号（小号）', desc: '搭配测试与素材采集', status: '已绑定', enabled: true, selected: false },
-  { id: 3, name: '充值账号（备用）', desc: '支付记录与月卡提醒', status: '已绑定', enabled: true, selected: false }
+  {
+    name: '主账号（国服）',
+    tag: '默认',
+    status: '已绑定',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=b6e3f4'
+  },
+  {
+    name: '收集号（小号）',
+    status: '已绑定',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka&backgroundColor=ffdfbf'
+  },
+  {
+    name: '充值账号（备用）',
+    status: '已绑定',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Molly&backgroundColor=c0aede'
+  }
 ]);
 
-const materialGroups = ref<MaterialGroup[]>([
-  { id: 1, name: '服装材料', desc: '套装制作、升级和染色材料', count: 36, enabled: true, selected: true },
-  { id: 2, name: '活动兑换', desc: '限时活动货币与奖励兑换', count: 18, enabled: true, selected: false },
-  { id: 3, name: '拍照地点', desc: '图册同步与地点索引', count: 12, enabled: true, selected: false }
+const aiSettings = ref<AiSetting[]>([
+  { title: '活动总结', desc: '活动结束后自动生成总结', active: true },
+  { title: '日常复盘', desc: '每日任务完成后生成复盘建议', active: true },
+  { title: '攻略笔记整理', desc: '自动整理笔记并生成要点', active: false },
+  { title: '版本更新解读', desc: '版本更新后自动生成重点解读', active: true }
 ]);
 
 const integrations = ref<IntegrationItem[]>([
-  { id: 1, name: '飞书机器人', desc: '提醒推送', icon: 'material-symbols:send-outline-rounded', enabled: true, selected: false },
-  { id: 2, name: 'OpenClaw', desc: '自动化执行', icon: 'material-symbols:hub-outline-rounded', enabled: true, selected: false },
-  { id: 3, name: 'Webhook', desc: '外部通知', icon: 'material-symbols:share-outline-rounded', enabled: true, selected: false }
+  { name: '飞书机器人', icon: 'material-symbols:send-outline-rounded', tone: 'blue', status: '已连接' },
+  { name: 'OpenClaw', icon: 'material-symbols:smart-toy-outline-rounded', tone: 'slate', status: '已连接' },
+  { name: 'Webhook', icon: 'material-symbols:extension-outline-rounded', tone: 'pink', status: '已连接' }
 ]);
 
-const aiSettings = ref([
-  { name: '活动总结', enabled: true },
-  { name: '日常复盘', enabled: true },
-  { name: '攻略笔记整理', enabled: true },
-  { name: '版本更新解读', enabled: true }
+const stats = computed<StatItem[]>(() => [
+  { label: '任务模板', value: String(dailyTasks.value.length + 8), icon: 'material-symbols:check-box-outline-rounded', tone: 'orange' },
+  { label: '提醒规则', value: String(reminders.value.length + 4), icon: 'material-symbols:timer-outline-rounded', tone: 'rose' },
+  { label: '关联资产', value: String(assets.value.length), icon: 'material-symbols:paid-outline-rounded', tone: 'amber' },
+  { label: '图册数量', value: '5', icon: 'material-symbols:photo-library-outline-rounded', tone: 'emerald' },
+  { label: 'AI 任务', value: String(aiSettings.value.filter(item => item.active).length - 1), icon: 'material-symbols:auto-awesome-outline-rounded', tone: 'purple' }
 ]);
 
-const stats = computed(() => [
-  ['任务模板', String(taskTemplates.value.length), 'material-symbols:checklist-rounded'],
-  ['提醒规则', String(reminderRules.value.length), 'material-symbols:alarm-outline-rounded'],
-  ['关联资产', String(assets.value.length), 'material-symbols:account-balance-wallet-outline-rounded'],
-  ['素材分区', String(materialGroups.value.length), 'material-symbols:inventory-2-outline-rounded'],
-  ['AI 任务', String(aiSettings.value.filter(item => item.enabled).length), 'material-symbols:auto-awesome-rounded']
+const projectHeroStats = computed<LifeGeminiProjectStat[]>(() => [
+  ...stats.value.map(item => ({ label: item.label, value: item.value })),
+  ...metaInfo.slice(0, 3).map(item => ({ label: item.label, value: item.value }))
 ]);
-const selectedRuleCount = computed(() => reminderRules.value.filter(item => item.selected).length);
-const selectedTemplateCount = computed(() => taskTemplates.value.filter(item => item.selected).length);
-const enabledRuleCount = computed(() => reminderRules.value.filter(item => item.enabled).length);
-const enabledTemplateCount = computed(() => taskTemplates.value.filter(item => item.enabled).length);
-const modalTitle = computed(() => {
-  if (modal.value.mode === 'delete') return '删除确认';
-  const action = modal.value.mode === 'create' ? '新增' : '编辑';
-  const targetMap: Record<ModalTarget, string> = {
-    reminder: '提醒规则',
-    template: '任务模板',
-    asset: '关联资产',
-    material: '素材分区',
-    integration: '集成'
-  };
-  return `${action}${targetMap[modal.value.target]}`;
-});
-const modalDescription = computed(() =>
-  modal.value.mode === 'delete' ? '此操作仅删除演示数据，不会影响真实后端配置。' : '填写名称和说明，用于演示管理页配置流程。'
-);
-const modalConfirmText = computed(() => (modal.value.mode === 'delete' ? '确认删除' : '保存'));
+
+function backToProject() {
+  routerPushByKey('infinity-nikki');
+}
 
 function switchTab(label: TabLabel) {
   activeTab.value = label;
   info('管理分区已切换', label);
 }
 
-function switchSection(section: ManageSection) {
-  activeSection.value = section;
-  info('配置分区已切换', section);
+function toggleReminder(rule: ReminderRule) {
+  rule.enabled = !rule.enabled;
+  info(rule.enabled ? '提醒规则已启用' : '提醒规则已停用', rule.title);
 }
 
-function toggleWeekday(index: number) {
-  weekdays.value[index].active = !weekdays.value[index].active;
-  info(weekdays.value[index].active ? '已启用重置日' : '已停用重置日', `星期${weekdays.value[index].label}`);
+function toggleAi(setting: AiSetting) {
+  setting.active = !setting.active;
+  info(setting.active ? 'AI 自动化已开启' : 'AI 自动化已关闭', setting.title);
 }
 
-function changeResetTime(value: (typeof resetOptions)[number]) {
-  resetTime.value = value;
-  info('每日重置时间已切换', value);
-}
-
-function toggleItem(item: ManageItem, label = '配置') {
-  item.enabled = !item.enabled;
-  info(item.enabled ? `${label}已启用` : `${label}已停用`, item.name);
-}
-
-function toggleSelect(item: ManageItem) {
-  item.selected = !item.selected;
-}
-
-function selectOnly(list: ManageItem[], item: ManageItem) {
-  list.forEach(row => {
-    row.selected = row.id === item.id;
-  });
-  info('已选择配置项', item.name);
-}
-
-function moveTemplate(index: number, direction: -1 | 1) {
-  const next = index + direction;
-  if (next < 0 || next >= taskTemplates.value.length) {
-    warning('无法继续排序', '已经到达列表边界');
-    return;
-  }
-
-  const list = taskTemplates.value;
-  [list[index], list[next]] = [list[next], list[index]];
-  success('模板排序已更新', list[next].name);
-}
-
-function batchSetTemplates(enabled: boolean) {
-  const selected = taskTemplates.value.filter(item => item.selected);
-  if (!selected.length) {
-    warning('请先选择任务模板');
-    return;
-  }
-  selected.forEach(item => {
-    item.enabled = enabled;
-  });
-  success(enabled ? '已批量启用模板' : '已批量停用模板', `${selected.length} 项`);
-}
-
-function batchSetRules(enabled: boolean) {
-  const selected = reminderRules.value.filter(item => item.selected);
-  if (!selected.length) {
-    warning('请先选择提醒规则');
-    return;
-  }
-  selected.forEach(item => {
-    item.enabled = enabled;
-  });
-  success(enabled ? '已批量启用提醒' : '已批量停用提醒', `${selected.length} 项`);
-}
-
-function resetLocalConfig() {
-  projectEnabled.value = true;
-  resetTime.value = '04:00';
-  remindAdvance.value = '提前 1 天　09:00';
-  weekdays.value.forEach((item, index) => {
-    item.active = index < 5;
-  });
-  info('配置已重置', '已恢复本页演示默认值');
-}
-
-function saveConfig() {
-  success('配置已保存', `模板 ${enabledTemplateCount.value} 个，提醒 ${enabledRuleCount.value} 个`);
-}
-
-function openModal(
-  target: ModalTarget,
-  mode: ModalMode,
-  source?: ReminderRule | TaskTemplate | AssetItem | MaterialGroup | IntegrationItem
-) {
-  modal.value = {
-    show: true,
-    mode,
-    target,
-    id: source?.id ?? null
-  };
-  formName.value = source?.name ?? '';
-  formDesc.value = source?.desc ?? '';
-  formCycle.value = source && 'cycle' in source ? source.cycle : '每日';
-}
-
-function getList(target: ModalTarget) {
-  const listMap = {
-    reminder: reminderRules.value,
-    template: taskTemplates.value,
-    asset: assets.value,
-    material: materialGroups.value,
-    integration: integrations.value
-  };
-  return listMap[target];
-}
-
-function saveModal() {
-  const name = formName.value.trim();
-  const desc = formDesc.value.trim();
-  const list = getList(modal.value.target);
-
-  if (modal.value.mode === 'delete') {
-    const index = list.findIndex(item => item.id === modal.value.id);
-    if (index >= 0) {
-      const [removed] = list.splice(index, 1);
-      success('已删除配置项', removed.name);
-    }
-    modal.value.show = false;
-    return;
-  }
-
-  if (!name) {
-    warning('请填写名称');
-    return;
-  }
-
-  if (modal.value.mode === 'edit') {
-    const target = list.find(item => item.id === modal.value.id);
-    if (target) {
-      target.name = name;
-      target.desc = desc || '已更新说明';
-      if (modal.value.target === 'template' && 'cycle' in target) {
-        target.cycle = formCycle.value;
-        target.resetAt = formCycle.value === '每周' ? `每周一 ${resetTime.value}` : `每日 ${resetTime.value}`;
-      }
-      success('配置项已保存', name);
-    }
-    modal.value.show = false;
-    return;
-  }
-
-  const id = Date.now();
-  if (modal.value.target === 'template') {
-    taskTemplates.value.unshift({
-      id,
-      name,
-      desc: desc || '新建任务模板',
-      cycle: formCycle.value,
-      resetAt: formCycle.value === '每周' ? `每周一 ${resetTime.value}` : `每日 ${resetTime.value}`,
-      enabled: true,
-      selected: true
-    });
-  } else if (modal.value.target === 'reminder') {
-    reminderRules.value.unshift({
-      id,
-      name,
-      desc: desc || '新建提醒规则',
-      advance: remindAdvance.value,
-      enabled: true,
-      selected: true
-    });
-  } else if (modal.value.target === 'asset') {
-    assets.value.unshift({ id, name, desc: desc || '新建关联资产', status: '待绑定', enabled: true, selected: true });
-  } else if (modal.value.target === 'material') {
-    materialGroups.value.unshift({ id, name, desc: desc || '新建素材分区', count: 0, enabled: true, selected: true });
-  } else {
-    integrations.value.push({
-      id,
-      name,
-      desc: desc || '新建集成',
-      icon: 'material-symbols:extension-outline-rounded',
-      enabled: true,
-      selected: false
-    });
-  }
-
-  modal.value.show = false;
-  success('配置项已新增', name);
+function openDemoModal(title: string, description = '当前为演示配置流程，后续可接入真实表单与接口。') {
+  modalTitle.value = title;
+  modalDescription.value = description;
+  modalShow.value = true;
 }
 
 function runSync() {
   if (!syncEnabled.value) {
-    warning('同步未启用', '请先开启自动同步');
+    warning('同步未开启', '请先开启自动同步');
     return;
   }
 
   syncRunning.value = true;
   window.setTimeout(() => {
     syncRunning.value = false;
-    success('图册同步完成', '已同步截图、活动图、视频');
+    success('图册同步完成', '截图、活动图、视频已完成同步');
   }, 600);
 }
 
-function scrollList(target: 'rule' | 'template' | 'material', direction: 'up' | 'down') {
-  const map = {
-    rule: ruleListRef.value,
-    template: templateListRef.value,
-    material: materialListRef.value
-  };
-  map[target]?.scrollBy({
-    top: direction === 'up' ? -120 : 120,
-    behavior: 'smooth'
+function saveConfig() {
+  success('配置已保存', `已保存 ${dailyTasks.value.length} 个模板和 ${reminders.value.length} 条提醒规则`);
+}
+
+function resetConfig() {
+  dailyResetAt.value = '04:00';
+  weeklyResetDay.value = '一';
+  versionReminder.value = '提前 1 天 09:00';
+  syncEnabled.value = true;
+  reminders.value.forEach(item => {
+    item.enabled = true;
   });
-  info('页面滚动已触发', direction === 'up' ? '向上查看列表' : '向下查看列表');
+  success('配置已恢复默认值', '无限暖暖项目配置已回到演示初始状态');
 }
 </script>
 
 <template>
-  <LifeAppShell
-    active="无限暖暖"
-    avatar="nikki"
-    title="无限暖暖管理"
-    description="记录游戏日常、活动、版本与养成进度，管理账号与相关资源。"
+  <LifeGeminiShell
+    title="项目配置"
+    description="配置无限暖暖的重置时间、提醒规则、账号资产、图册同步和 AI 自动化。"
     :breadcrumbs="[
       { label: '首页', routeKey: 'home' },
       { label: '项目', routeKey: 'projects' },
@@ -403,885 +270,1031 @@ function scrollList(target: 'rule' | 'template' | 'material', direction: 'up' | 
     <LifeToastHost :items="toasts" @close="removeToast" />
 
     <template #actions>
-      <button class="lm-plain-btn" type="button" @click="backToProject">← 返回项目详情</button>
-      <button class="lm-plain-btn" type="button" @click="backToProject">预览项目概览</button>
-      <button class="lm-icon-btn" type="button" aria-label="搜索配置" @click="info('搜索配置', '可继续接入配置项搜索')">
-        <SvgIcon icon="material-symbols:search-rounded" />
-      </button>
-      <button class="lm-icon-btn" type="button" aria-label="查看提醒" @click="scrollList('rule', 'down')">
-        <SvgIcon icon="material-symbols:notifications-outline-rounded" />
-      </button>
-      <button class="lm-purple-btn" type="button" @click="openModal('template', 'create')">
-        <SvgIcon icon="material-symbols:add-rounded" />新建
-      </button>
+      <LifeGeminiTopActions
+        back-text="返回详情"
+        search-label="搜索配置"
+        notification-label="查看提醒"
+        @search="info('搜索配置', '可继续接入配置项搜索')"
+        @notification="switchTab('提醒规则')"
+        @back="backToProject"
+        @create="openDemoModal('新建配置')"
+      />
     </template>
 
-    <section class="nikki-manage-hero lm-card">
-      <div class="top-avatar lm-hero-art nikki"></div>
-      <div class="lm-detail-title">
-        <h1>无限暖暖 <span class="lm-tag pink">游戏项目</span> <span class="lm-tag green">进行中</span></h1>
-        <p>记录游戏日常、活动、版本与养成进度，管理账号与相关资源。</p>
-        <div class="hero-fields">
-          <span>创建时间 <b>2025-04-10</b></span>
-          <span>开始时间 <b>2024-12-05</b></span>
-          <span>类型 <b>游戏</b></span>
-          <span>项目状态 <b>{{ projectEnabled ? '启用中' : '已停用' }}</b></span>
-        </div>
-      </div>
-      <div class="stat-strip">
-        <div v-for="item in stats" :key="item[0]">
-          <SvgIcon :icon="item[2]" />
-          <span>{{ item[0] }}</span>
-          <strong>{{ item[1] }}</strong>
-        </div>
-      </div>
-    </section>
-
-    <nav class="lm-tabs">
-      <button v-for="item in tabs" :key="item.label" :class="{ active: item.label === activeTab }" type="button" @click="switchTab(item.label)">
-        <SvgIcon :icon="item.icon" />{{ item.label }}
-      </button>
-    </nav>
-
-    <section class="lm-grid nikki-manage-grid">
-      <article class="lm-card info-card">
-        <div class="lm-card-title">
-          <h2>基本信息</h2>
-          <button type="button" @click="projectEnabled = !projectEnabled; info(projectEnabled ? '项目已启用' : '项目已停用', '无限暖暖')">
-            {{ projectEnabled ? '停用' : '启用' }}
+    <div class="nikki-config-page">
+      <LifeGeminiProjectHero
+        title="无限暖暖"
+        description="记录游戏日常、活动、版本与养成进度，管理账号与相关资源。"
+        :cover-src="coverUrl"
+        cover-alt="无限暖暖项目封面"
+        :tags="projectTags"
+        :stats="projectHeroStats"
+      >
+        <template #actions>
+          <button class="hero-action-btn" type="button" @click="success('封面已更新', '已应用当前演示封面')">
+            <SvgIcon icon="material-symbols:image-outline-rounded" />
+            更换封面
           </button>
-        </div>
-        <div class="manage-segment">
-          <button v-for="item in sectionOptions" :key="item" :class="{ active: item === activeSection }" type="button" @click="switchSection(item)">
-            {{ item }}
+          <button class="hero-action-btn" type="button" @click="openDemoModal('编辑备注', '可在这里记录版本、账号或素材管理备注。')">
+            <SvgIcon icon="material-symbols:edit-note-outline-rounded" />
+            编辑备注
           </button>
-        </div>
-        <dl>
-          <dt>项目名称</dt><dd>无限暖暖</dd>
-          <dt>项目类型</dt><dd>游戏项目</dd>
-          <dt>状态</dt><dd><span class="lm-tag" :class="projectEnabled ? 'green' : 'amber'">{{ projectEnabled ? '进行中' : '已停用' }}</span></dd>
-          <dt>简介</dt><dd>记录日常任务、活动提醒、版本更新、抽卡计划、搭配笔记等内容。</dd>
-          <dt>封面</dt>
-          <dd>
-            <span class="small-cover lm-cover nikki"></span>
-            <button class="lm-plain-btn" type="button" @click="success('封面已更新', '已应用当前演示封面')">更换封面</button>
-          </dd>
-          <dt>标签</dt><dd><span class="lm-tag">换装</span> <span class="lm-tag blue">日常</span> <span class="lm-tag amber">活动</span> <span class="lm-tag pink">收集</span></dd>
-        </dl>
-      </article>
+        </template>
+      </LifeGeminiProjectHero>
 
-      <article class="lm-card reset-card">
-        <div class="lm-card-title">
-          <h2>游戏重置设置</h2>
-          <button type="button" @click="resetLocalConfig">重置</button>
-        </div>
-        <div class="reset-time">
-          <span>每日重置时间</span>
-          <select :value="resetTime" @change="changeResetTime(($event.target as HTMLSelectElement).value as (typeof resetOptions)[number])">
-            <option v-for="item in resetOptions" :key="item">{{ item }}</option>
-          </select>
-          <SvgIcon icon="material-symbols:alarm-outline-rounded" />
-        </div>
-        <div class="time-axis"><i></i><i></i><i></i><i></i><i></i><i></i><em>{{ resetTime }}</em></div>
-        <div class="week-axis">
-          <button
-            v-for="(item, index) in weekdays"
-            :key="item.label"
-            :class="{ active: item.active }"
-            type="button"
-            @click="toggleWeekday(index)"
-          >
-            {{ item.label }}
-          </button>
-        </div>
-        <div class="reset-time">
-          <span>版本更新时段提醒</span>
-          <strong>{{ remindAdvance }}</strong>
-          <SvgIcon icon="material-symbols:alarm-outline-rounded" />
-        </div>
-        <p>将在版本维护或更新前提醒你</p>
-      </article>
+      <LifeGeminiTabs v-model="activeTab" :tabs="tabs" />
 
-      <article class="lm-card reminder-card">
-        <div class="lm-card-title">
-          <h2>提醒规则 <span>（用于生成倒计时与通知）</span></h2>
-          <div class="card-tools">
-            <button type="button" @click="scrollList('rule', 'up')"><SvgIcon icon="material-symbols:keyboard-arrow-up-rounded" /></button>
-            <button type="button" @click="scrollList('rule', 'down')"><SvgIcon icon="material-symbols:keyboard-arrow-down-rounded" /></button>
-          </div>
-        </div>
-        <div class="batch-bar">
-          <span>已选 {{ selectedRuleCount }}</span>
-          <button type="button" @click="batchSetRules(true)">批量启用</button>
-          <button type="button" @click="batchSetRules(false)">批量停用</button>
-        </div>
-        <div ref="ruleListRef" class="manage-list">
-          <div v-for="item in reminderRules" :key="item.id" class="rule-row" :class="{ selected: item.selected, disabled: !item.enabled }">
-            <button class="select-dot" type="button" :aria-label="`选择${item.name}`" @click="toggleSelect(item)">
-              <SvgIcon :icon="item.selected ? 'material-symbols:check-circle-rounded' : 'material-symbols:radio-button-unchecked-rounded'" />
+      <section class="top-grid">
+        <LifeGeminiCard class="config-card basic-card" title="基本信息">
+          <dl class="info-list">
+            <dt>项目名称</dt>
+            <dd>无限暖暖</dd>
+            <dt>项目类型</dt>
+            <dd>游戏项目</dd>
+            <dt>状态</dt>
+            <dd><span class="status-dot"></span>进行中</dd>
+            <dt>简介</dt>
+            <dd>记录日常任务、活动提醒、版本更新、抽卡计划、搭配笔记等内容。</dd>
+            <dt>封面</dt>
+            <dd class="cover-edit">
+              <img :src="coverUrl" alt="无限暖暖封面缩略图" />
+              <button type="button" @click="success('封面已更新', '已应用当前演示封面')">更换封面</button>
+            </dd>
+            <dt>标签</dt>
+            <dd class="tag-row">
+              <span>换装</span>
+              <span>日常</span>
+              <span>活动</span>
+              <span>收集</span>
+              <button type="button" @click="openDemoModal('添加标签')">
+                <SvgIcon icon="material-symbols:add-rounded" />
+                添加
+              </button>
+            </dd>
+          </dl>
+        </LifeGeminiCard>
+
+        <LifeGeminiCard class="config-card reset-card" title="游戏重置设置">
+          <div class="setting-row">
+            <span>每日重置时间</span>
+            <button type="button" @click="openDemoModal('设置每日重置时间')">
+              {{ dailyResetAt }}
+              <SvgIcon icon="material-symbols:schedule-outline-rounded" />
             </button>
-            <div><strong>{{ item.name }}</strong><p>{{ item.desc }} · {{ item.advance }}</p></div>
-            <em>{{ item.enabled ? '启用中' : '已停用' }}</em>
-            <div class="row-tools">
-              <button type="button" @click="toggleItem(item, '提醒规则')">
-                <SvgIcon :icon="item.enabled ? 'material-symbols:pause-circle-outline-rounded' : 'material-symbols:play-circle-outline-rounded'" />
-              </button>
-              <button type="button" @click="openModal('reminder', 'edit', item)">
-                <SvgIcon icon="material-symbols:edit-outline-rounded" />
-              </button>
-              <button type="button" @click="openModal('reminder', 'delete', item)">
-                <SvgIcon icon="material-symbols:delete-outline-rounded" />
+          </div>
+
+          <div class="weekly-reset">
+            <div>
+              <span>每周重置日</span>
+              <strong>周{{ weeklyResetDay }}</strong>
+            </div>
+            <div class="week-axis">
+              <button
+                v-for="day in ['一', '二', '三', '四', '五', '六', '日']"
+                :key="day"
+                :class="{ active: weeklyResetDay === day }"
+                type="button"
+                @click="weeklyResetDay = day; info('每周重置日已切换', `周${day}`)"
+              >
+                <i v-if="weeklyResetDay === day">{{ dailyResetAt }}</i>
+                <span></span>
+                {{ day }}
               </button>
             </div>
           </div>
-        </div>
-        <button class="add-line" type="button" @click="openModal('reminder', 'create')">＋ 新建提醒规则</button>
-      </article>
 
-      <article class="lm-card template-card">
-        <div class="lm-card-title">
-          <h2>日常任务模板</h2>
-          <button type="button" @click="openModal('template', 'create')">添加</button>
-        </div>
-        <div class="batch-bar">
-          <span>已选 {{ selectedTemplateCount }}</span>
-          <button type="button" @click="batchSetTemplates(true)">批量启用</button>
-          <button type="button" @click="batchSetTemplates(false)">批量停用</button>
-        </div>
-        <div ref="templateListRef" class="manage-list">
-          <div v-for="(item, index) in taskTemplates" :key="item.id" class="template-row" :class="{ selected: item.selected, disabled: !item.enabled }">
-            <button class="select-dot" type="button" :aria-label="`选择${item.name}`" @click="selectOnly(taskTemplates, item)">
-              <SvgIcon :icon="item.selected ? 'material-symbols:check-circle-rounded' : 'material-symbols:radio-button-unchecked-rounded'" />
+          <div class="setting-row version-row">
+            <span>版本更新时间提醒</span>
+            <button type="button" @click="openDemoModal('设置版本提醒时间')">
+              {{ versionReminder }}
+              <SvgIcon icon="material-symbols:schedule-outline-rounded" />
             </button>
-            <div><strong>{{ item.name }}</strong><p>{{ item.desc }}</p></div>
-            <em>{{ item.cycle }}</em>
-            <time>{{ item.resetAt }}</time>
-            <div class="row-tools">
-              <button type="button" @click="moveTemplate(index, -1)"><SvgIcon icon="material-symbols:keyboard-arrow-up-rounded" /></button>
-              <button type="button" @click="moveTemplate(index, 1)"><SvgIcon icon="material-symbols:keyboard-arrow-down-rounded" /></button>
-              <button type="button" @click="toggleItem(item, '任务模板')">
-                <SvgIcon :icon="item.enabled ? 'material-symbols:toggle-on-outline-rounded' : 'material-symbols:toggle-off-outline-rounded'" />
-              </button>
-              <button type="button" @click="openModal('template', 'edit', item)"><SvgIcon icon="material-symbols:edit-outline-rounded" /></button>
-              <button type="button" @click="openModal('template', 'delete', item)"><SvgIcon icon="material-symbols:delete-outline-rounded" /></button>
-            </div>
           </div>
-        </div>
-      </article>
+          <p class="hint-line"><SvgIcon icon="material-symbols:notifications-active-outline-rounded" />将在版本维护或更新前提醒你</p>
+        </LifeGeminiCard>
 
-      <article class="lm-card asset-card">
-        <div class="lm-card-title">
-          <h2>关联资产 <span>（用于账号与充值管理）</span></h2>
-          <button type="button" @click="openModal('asset', 'create')">添加</button>
-        </div>
-        <button
-          v-for="item in assets"
-          :key="item.id"
-          class="asset-row"
-          :class="{ selected: item.selected, disabled: !item.enabled }"
-          type="button"
-          @click="selectOnly(assets, item)"
-        >
-          <span class="lm-avatar"></span>
-          <span>{{ item.name }}<small>{{ item.desc }}</small></span>
-          <em>{{ item.enabled ? item.status : '已停用' }}</em>
-        </button>
-        <div class="inline-actions">
-          <button type="button" @click="assets.find(item => item.selected) && toggleItem(assets.find(item => item.selected)!, '资产')">启停选中</button>
-          <button type="button" @click="assets.find(item => item.selected) && openModal('asset', 'edit', assets.find(item => item.selected)!)">编辑</button>
-          <button type="button" @click="assets.find(item => item.selected) && openModal('asset', 'delete', assets.find(item => item.selected)!)">删除</button>
-        </div>
-      </article>
-
-      <article class="lm-card oss-card">
-        <div class="lm-card-title">
-          <h2>图册与 OSS 同步</h2>
-          <button type="button" @click="syncEnabled = !syncEnabled; info(syncEnabled ? '自动同步已开启' : '自动同步已关闭')">
-            {{ syncEnabled ? '关闭' : '开启' }}
+        <LifeGeminiCard class="config-card reminder-card">
+          <template #title>
+            提醒规则 <span>（用于生成倒计时与通知）</span>
+          </template>
+          <div class="reminder-list">
+            <button
+              v-for="item in reminders"
+              :key="item.title"
+              class="reminder-item"
+              :class="{ disabled: !item.enabled }"
+              type="button"
+              @click="toggleReminder(item)"
+            >
+              <span class="tone-icon" :class="item.tone">
+                <SvgIcon :icon="item.icon" />
+              </span>
+              <span>
+                <strong>{{ item.title }}</strong>
+                <small>{{ item.desc }}</small>
+              </span>
+              <em>{{ item.enabled ? '启用中' : '已停用' }}</em>
+              <SvgIcon icon="material-symbols:more-horiz-rounded" />
+            </button>
+          </div>
+          <button class="dash-button" type="button" @click="openDemoModal('新建提醒规则')">
+            <SvgIcon icon="material-symbols:add-rounded" />
+            新建提醒规则
           </button>
-        </div>
-        <h3><SvgIcon icon="material-symbols:cloud-done-outline-rounded" />阿里云 OSS <span class="lm-tag" :class="syncEnabled ? 'green' : 'amber'">{{ syncEnabled ? '已连接' : '已停用' }}</span></h3>
-        <dl>
-          <dt>同步状态</dt><dd>{{ syncEnabled ? '正常' : '暂停' }}</dd>
-          <dt>最近同步</dt><dd>2025-05-20 10:30</dd>
-          <dt>自动同步</dt><dd>{{ syncEnabled ? '已开启（每日 02:30）' : '已关闭' }}</dd>
-          <dt>同步内容</dt><dd>截图、活动图、视频</dd>
-        </dl>
-        <button class="lm-plain-btn" type="button" @click="runSync">{{ syncRunning ? '同步中...' : '立即同步' }}</button>
-        <button class="lm-plain-btn" type="button" @click="openModal('material', 'create')">设置同步规则</button>
-      </article>
+        </LifeGeminiCard>
+      </section>
 
-      <article class="lm-card material-card">
-        <div class="lm-card-title">
-          <h2>素材分区</h2>
-          <div class="card-tools">
-            <button type="button" @click="scrollList('material', 'up')"><SvgIcon icon="material-symbols:keyboard-arrow-up-rounded" /></button>
-            <button type="button" @click="scrollList('material', 'down')"><SvgIcon icon="material-symbols:keyboard-arrow-down-rounded" /></button>
-          </div>
-        </div>
-        <div ref="materialListRef" class="manage-list compact-list">
-          <div v-for="item in materialGroups" :key="item.id" class="material-row" :class="{ selected: item.selected, disabled: !item.enabled }">
-            <button class="select-dot" type="button" :aria-label="`选择${item.name}`" @click="selectOnly(materialGroups, item)">
-              <SvgIcon :icon="item.selected ? 'material-symbols:check-circle-rounded' : 'material-symbols:radio-button-unchecked-rounded'" />
-            </button>
-            <div><strong>{{ item.name }}</strong><p>{{ item.desc }}</p></div>
-            <em>{{ item.count }} 项</em>
-            <div class="row-tools">
-              <button type="button" @click="toggleItem(item, '素材分区')"><SvgIcon icon="material-symbols:power-settings-new-rounded" /></button>
-              <button type="button" @click="openModal('material', 'edit', item)"><SvgIcon icon="material-symbols:edit-outline-rounded" /></button>
-              <button type="button" @click="openModal('material', 'delete', item)"><SvgIcon icon="material-symbols:delete-outline-rounded" /></button>
+      <section class="module-grid">
+        <LifeGeminiCard class="config-card compact-card" title="日常任务模板">
+          <div class="mini-head"><span>类型</span><span>重置</span></div>
+          <div class="task-list">
+            <div v-for="item in dailyTasks" :key="item.title" class="task-item">
+              <span class="tone-icon" :class="item.tone">
+                <SvgIcon :icon="item.icon" />
+              </span>
+              <span>
+                <strong>{{ item.title }}</strong>
+                <small>{{ item.desc }}</small>
+              </span>
+              <em :class="{ weekly: item.cycle === '每周' }">{{ item.cycle }}</em>
+              <time>{{ item.reset }}</time>
             </div>
           </div>
-        </div>
-        <button class="add-line" type="button" @click="openModal('material', 'create')">＋ 添加素材分区</button>
-      </article>
+          <button class="text-action" type="button" @click="openDemoModal('添加任务模板')">
+            <SvgIcon icon="material-symbols:add-rounded" />
+            添加模板
+          </button>
+        </LifeGeminiCard>
 
-      <article class="lm-card ai-setting-card">
-        <div class="lm-card-title"><h2>AI 自动化设置</h2></div>
-        <p v-for="item in aiSettings" :key="item.name">
+        <LifeGeminiCard class="config-card compact-card">
+          <template #title>
+            关联资产 <span>（用于账号与资源管理）</span>
+          </template>
+          <div class="asset-list">
+            <button v-for="item in assets" :key="item.name" type="button" @click="openDemoModal('编辑关联资产', item.name)">
+              <img :src="item.avatar" :alt="item.name" />
+              <span>
+                <strong>{{ item.name }}</strong>
+                <i v-if="item.tag">{{ item.tag }}</i>
+              </span>
+              <em>{{ item.status }}</em>
+              <SvgIcon icon="material-symbols:lock-outline-rounded" />
+            </button>
+          </div>
+          <button class="text-action" type="button" @click="openDemoModal('添加账号/资产')">
+            <SvgIcon icon="material-symbols:add-rounded" />
+            添加账号/资产
+          </button>
+        </LifeGeminiCard>
+
+        <LifeGeminiCard class="config-card compact-card oss-card" title="图册与 OSS 同步">
+          <div class="oss-provider">
+            <span class="tone-icon orange"><SvgIcon icon="material-symbols:cloud-upload-outline-rounded" /></span>
+            <strong>阿里云 OSS</strong>
+            <em>{{ syncEnabled ? '已连接' : '已停用' }}</em>
+          </div>
+          <dl>
+            <dt>同步状态</dt>
+            <dd><span class="status-dot"></span>{{ syncEnabled ? '正常' : '暂停' }}</dd>
+            <dt>最近同步</dt>
+            <dd>2025-05-20 10:30</dd>
+            <dt>自动同步</dt>
+            <dd>{{ syncEnabled ? '已开启（每日 02:30）' : '已关闭' }}</dd>
+            <dt>同步内容</dt>
+            <dd>截图、活动图、视频</dd>
+          </dl>
+          <div class="split-actions">
+            <button type="button" @click="runSync">{{ syncRunning ? '同步中...' : '立即同步' }}</button>
+            <button type="button" @click="openDemoModal('设置同步规则')">设置同步规则</button>
+          </div>
+        </LifeGeminiCard>
+
+        <LifeGeminiCard class="config-card compact-card" title="AI 自动化设置">
+          <div class="ai-list">
+            <div v-for="item in aiSettings" :key="item.title" class="ai-item">
+              <span>
+                <strong>{{ item.title }}</strong>
+                <small>{{ item.desc }}</small>
+              </span>
+              <button class="toggle-switch" :class="{ active: item.active }" type="button" :aria-label="`切换${item.title}`" @click="toggleAi(item)">
+                <i></i>
+              </button>
+            </div>
+          </div>
+          <button class="text-action" type="button" @click="openDemoModal('AI 任务历史', '这里可查看自动总结、复盘和版本解读记录。')">
+            查看 AI 任务历史
+          </button>
+        </LifeGeminiCard>
+      </section>
+
+      <section class="integration-bar">
+        <div class="integration-title">
+          <strong>集成与通知</strong>
+          <span>将提醒与信息推送到你常用的平台</span>
+        </div>
+        <button v-for="item in integrations" :key="item.name" type="button" @click="openDemoModal(`${item.name} 设置`)">
+          <span class="tone-icon" :class="item.tone"><SvgIcon :icon="item.icon" /></span>
           {{ item.name }}
-          <button class="lm-switch" :class="{ off: !item.enabled }" type="button" :aria-label="`切换${item.name}`" @click="item.enabled = !item.enabled; info(item.enabled ? 'AI 设置已启用' : 'AI 设置已停用', item.name)">
-            <i></i>
-          </button>
-        </p>
-        <button type="button" @click="info('AI 任务历史', '这里可查看自动总结、复盘和版本解读记录')">查看 AI 任务历史</button>
-      </article>
-
-      <article class="lm-card integration-card">
-        <div class="lm-card-title">
-          <h2>集成与通知</h2>
-          <button type="button" @click="openModal('integration', 'create')">添加集成</button>
+          <em>{{ item.status }}</em>
+        </button>
+        <button class="add-integration" type="button" @click="openDemoModal('添加集成')">
+          <SvgIcon icon="material-symbols:add-rounded" />
+          添加集成
+        </button>
+        <div class="footer-actions">
+          <button type="button" @click="resetConfig">取消</button>
+          <button type="button" @click="saveConfig">保存配置</button>
         </div>
-        <div>
-          <button
-            v-for="item in integrations"
-            :key="item.id"
-            type="button"
-            :class="{ disabled: !item.enabled }"
-            @click="toggleItem(item, '集成')"
-          >
-            <SvgIcon :icon="item.icon" />{{ item.name }} <span>{{ item.enabled ? '已连接' : '已停用' }}</span>
-          </button>
-          <button type="button" @click="openModal('integration', 'create')">＋ 添加集成</button>
-        </div>
-      </article>
-    </section>
-
-    <footer class="lm-bottom-bar">
-      <button class="lm-plain-btn" type="button" @click="resetLocalConfig">重置</button>
-      <button class="lm-purple-btn" type="button" @click="saveConfig">保存配置</button>
-    </footer>
+      </section>
+    </div>
 
     <LifeModal
-      v-model:show="modal.show"
+      v-model:show="modalShow"
       :title="modalTitle"
       :description="modalDescription"
-      :confirm-text="modalConfirmText"
+      confirm-text="确定"
       cancel-text="取消"
-      :tone="modal.mode === 'delete' ? 'danger' : 'default'"
-      @confirm="saveModal"
+      @confirm="success('操作已记录', modalTitle)"
     >
-      <div v-if="modal.mode === 'delete'" class="delete-confirm">
-        <SvgIcon icon="material-symbols:warning-outline-rounded" />
-        <p>确认删除「{{ formName }}」？删除后会从当前演示列表中移除。</p>
-      </div>
-      <div v-else class="manage-form">
-        <label>
-          <span>名称</span>
-          <input v-model="formName" maxlength="24" placeholder="请输入配置名称" />
-        </label>
-        <label>
-          <span>说明</span>
-          <input v-model="formDesc" maxlength="48" placeholder="请输入配置说明" />
-        </label>
-        <label v-if="modal.target === 'template'">
-          <span>周期</span>
-          <select v-model="formCycle">
-            <option>每日</option>
-            <option>每周</option>
-          </select>
-        </label>
+      <div class="demo-modal-content">
+        <SvgIcon icon="material-symbols:settings-outline-rounded" />
+        <p>这里保留为页面演示交互，后续接入真实配置表单和后端接口。</p>
       </div>
     </LifeModal>
-  </LifeAppShell>
+  </LifeGeminiShell>
 </template>
 
 <style scoped>
-.nikki-manage-hero {
-  display: grid;
-  grid-template-columns: 80px minmax(0, 1fr) 440px;
-  gap: 18px;
-  align-items: center;
-  min-height: 118px;
+.nikki-config-page {
+  --primary: #6366f1;
+  --surface: #f8fafc;
+  --border: #e8ecf4;
+  --muted: #64748b;
+  color: #1e293b;
 }
 
-.top-avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
-}
-
-.hero-fields {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 17px;
-}
-
-.hero-fields span {
-  padding: 9px 11px;
-  border-radius: 6px;
-  background: #fafafe;
-  color: #8b91a1;
-  font-size: 10px;
-}
-
-.hero-fields b {
-  display: block;
-  margin-top: 6px;
-  color: #222839;
-}
-
-.stat-strip {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0;
-  align-self: stretch;
-}
-
-.stat-strip div {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 5px;
-  border-left: 1px solid #edf0f6;
-  color: #7f8696;
-  font-size: 10px;
-}
-
-.stat-strip .svg-icon {
-  color: #d7992f;
-  font-size: 18px;
-}
-
-.stat-strip strong {
-  color: #1b2130;
-  font-size: 16px;
-}
-
-.nikki-manage-grid {
-  grid-template-columns: 1.3fr 1.7fr 1.9fr;
-  margin-top: 14px;
-}
-
-.info-card dl {
-  display: grid;
-  grid-template-columns: 66px minmax(0, 1fr);
-  gap: 11px;
-  margin: 0;
-  color: #4f5769;
-  font-size: 11px;
-}
-
-.info-card dt {
-  color: #8b91a1;
-}
-
-.info-card dd {
-  margin: 0;
-}
-
-.manage-segment {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
-  margin-bottom: 16px;
-  padding: 4px;
-  border-radius: 8px;
-  background: #f6f7fc;
-}
-
-.manage-segment button,
-.batch-bar button,
-.card-tools button,
-.inline-actions button {
+.nikki-config-page button {
   border: 0;
+  font: inherit;
   cursor: pointer;
 }
 
-.manage-segment button {
-  min-height: 28px;
-  border-radius: 7px;
-  background: transparent;
-  color: #7d8495;
-  font-size: 10px;
-}
-
-.manage-segment button.active {
+.integration-bar {
+  border: 1px solid #f1f5f9;
+  border-radius: 24px;
   background: #fff;
-  color: #765ce8;
-  box-shadow: 0 8px 18px rgba(93, 78, 180, 0.08);
+  box-shadow: 0 2px 10px -4px rgba(0, 0, 0, 0.05);
 }
 
-.small-cover {
-  display: inline-block;
-  width: 42px;
-  height: 42px;
-  margin-right: 9px;
-  border-radius: 6px;
-  vertical-align: middle;
+.cover-edit img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.reset-time {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 18px;
-  align-items: center;
-  gap: 10px;
-  color: #7f8696;
-  font-size: 11px;
+.tag-row span {
+  border: 1px solid #dfe4ff;
+  background: #eef2ff;
+  color: var(--primary);
 }
 
-.reset-time strong {
-  color: #202636;
-  font-size: 13px;
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
 }
 
-.reset-time select {
-  width: 82px;
-  height: 28px;
-  border: 1px solid #edf0f6;
-  border-radius: 7px;
-  background: #fff;
-  color: #202636;
+.mini-head,
+.task-item small,
+.ai-item small,
+.integration-title span,
+.reminder-item small {
+  color: var(--muted);
   font-size: 12px;
 }
 
-.time-axis {
-  position: relative;
+.tone-icon {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  border-radius: 8px;
+}
+
+.tone-icon .svg-icon {
+  font-size: 20px;
+}
+
+.tone-icon.indigo {
+  background: #eef2ff;
+  color: #6366f1;
+}
+
+.tone-icon.orange {
+  background: #fff7ed;
+  color: #f97316;
+}
+
+.tone-icon.rose {
+  background: #fff1f2;
+  color: #f43f5e;
+}
+
+.tone-icon.amber {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.tone-icon.emerald {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.tone-icon.purple {
+  background: #faf5ff;
+  color: #9333ea;
+}
+
+.tone-icon.blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.tone-icon.slate {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.tone-icon.pink {
+  background: #fdf2f8;
+  color: #db2777;
+}
+
+.top-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(340px, 1.12fr) minmax(380px, 1.2fr);
+  gap: 20px;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.config-card {
+  min-width: 0;
+}
+
+.config-card :deep(h3 span) {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.hero-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px;
+  background: #fff;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.info-list,
+.oss-card dl {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 16px 12px;
+  margin: 0;
+  color: #334155;
+  font-size: 14px;
+}
+
+.info-list dt,
+.oss-card dt {
+  color: #94a3b8;
+}
+
+.info-list dd,
+.oss-card dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.info-list dd:nth-of-type(3),
+.oss-card dd:first-of-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #059669;
+}
+
+.cover-edit {
   display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cover-edit img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+}
+
+.cover-edit button,
+.tag-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.tag-row button {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.setting-row,
+.weekly-reset > div:first-child {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin: 25px 0 17px;
-  padding: 0 8px;
+  gap: 14px;
 }
 
-.time-axis::before {
-  content: '';
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 5px;
-  height: 2px;
-  background: #e8eaf3;
+.setting-row span,
+.weekly-reset span {
+  color: #475569;
+  font-size: 14px;
 }
 
-.time-axis i {
-  position: relative;
-  z-index: 1;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #d8d5f5;
+.setting-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
 }
 
-.time-axis i:first-child {
-  background: #765ce8;
+.weekly-reset {
+  margin: 24px 0;
 }
 
-.time-axis em {
-  position: absolute;
-  right: 33px;
-  top: -18px;
-  color: #765ce8;
-  font-size: 10px;
-  font-style: normal;
+.weekly-reset strong {
+  color: #1e293b;
 }
 
 .week-axis {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 21px;
-  color: #9aa0ae;
-  font-size: 11px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 18px;
+  padding: 10px 8px 0;
+}
+
+.week-axis::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  left: 20px;
+  height: 4px;
+  border-radius: 999px;
+  background: #f1f5f9;
 }
 
 .week-axis button {
+  position: relative;
+  z-index: 1;
   display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border: 0;
-  border-radius: 50%;
+  justify-items: center;
+  gap: 8px;
+  min-width: 0;
   background: transparent;
-  color: inherit;
-  cursor: pointer;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.week-axis button span {
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: #cbd5e1;
+  box-sizing: content-box;
 }
 
 .week-axis button.active {
-  background: #765ce8;
-  color: #fff;
+  color: var(--primary);
+  font-weight: 800;
 }
 
-.reset-card > p {
-  color: #765ce8;
-  font-size: 10px;
+.week-axis button.active span {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border-width: 4px;
+  background: var(--primary);
 }
 
-.card-tools {
-  display: flex;
-  gap: 6px;
+.week-axis i {
+  position: absolute;
+  top: -18px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #e0e7ff;
+  color: var(--primary);
+  font-size: 11px;
+  font-style: normal;
+  white-space: nowrap;
 }
 
-.card-tools button {
-  display: inline-grid;
-  width: 26px;
-  height: 26px;
-  place-items: center;
-  border-radius: 7px;
-  background: #f6f7fc;
-  color: #765ce8;
+.version-row {
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
 }
 
-.batch-bar {
+.hint-line {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  color: #8b91a1;
-  font-size: 10px;
+  gap: 7px;
+  margin: 12px 0 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: #eef2ff;
+  color: var(--primary);
+  font-size: 12px;
 }
 
-.batch-bar button {
-  padding: 5px 9px;
-  border-radius: 999px;
-  background: #f6f7fc;
-  color: #765ce8;
-  font-size: 10px;
+.reminder-list,
+.task-list,
+.asset-list,
+.ai-list {
+  display: grid;
+  gap: 10px;
 }
 
-.manage-list {
-  max-height: 238px;
+.reminder-list {
+  max-height: 246px;
   overflow: auto;
   padding-right: 2px;
 }
 
-.compact-list {
-  max-height: 188px;
-}
-
-.rule-row,
-.template-row,
-.material-row {
+.reminder-item,
+.asset-list button {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) auto 96px;
-  gap: 10px;
+  width: 100%;
   align-items: center;
-  margin-bottom: 10px;
-  padding: 10px;
-  border-radius: 7px;
-  background: #fafafe;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  text-align: left;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
-.template-row {
-  grid-template-columns: 26px minmax(0, 1fr) auto 72px 136px;
+.reminder-item {
+  grid-template-columns: 36px minmax(0, 1fr) auto 24px;
+  gap: 12px;
+  padding: 12px;
 }
 
-.material-row {
-  grid-template-columns: 26px minmax(0, 1fr) 46px 90px;
+.reminder-item:hover,
+.asset-list button:hover {
+  border-color: #dbe2ee;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
 }
 
-.rule-row.selected,
-.template-row.selected,
-.material-row.selected {
-  background: #f7f5ff;
-  box-shadow: inset 0 0 0 1px rgba(118, 92, 232, 0.14);
-}
-
-.rule-row.disabled,
-.template-row.disabled,
-.material-row.disabled,
-.asset-row.disabled,
-.integration-card button.disabled {
+.reminder-item.disabled {
   opacity: 0.58;
 }
 
-.rule-row strong,
-.template-row strong,
-.material-row strong {
+.reminder-item strong,
+.task-item strong,
+.asset-list strong,
+.ai-item strong {
   display: block;
-  color: #252b3c;
-  font-size: 11px;
+  overflow: hidden;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.rule-row p,
-.template-row p,
-.material-row p {
-  margin: 4px 0 0;
-  color: #8b91a1;
-  font-size: 9px;
+.reminder-item small,
+.task-item small,
+.ai-item small {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.rule-row em,
-.template-row em,
-.material-row em {
-  color: #31a978;
-  font-size: 10px;
+.reminder-item em {
+  color: #10b981;
+  font-size: 12px;
   font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.template-row time {
-  color: #7f8696;
-  font-size: 10px;
-}
-
-.select-dot,
-.row-tools button {
-  display: inline-grid;
-  place-items: center;
-  border: 0;
-  background: transparent;
-  color: #765ce8;
-  cursor: pointer;
-}
-
-.select-dot {
-  width: 24px;
-  height: 24px;
-  font-size: 18px;
-}
-
-.row-tools {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.row-tools button {
-  width: 23px;
-  height: 23px;
-  border-radius: 6px;
-  background: #fff;
-  color: #7d8495;
-}
-
-.add-line {
-  border: 0;
-  background: transparent;
-  color: #765ce8;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.template-card,
-.integration-card {
-  grid-column: span 1;
-}
-
-.asset-row {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+.dash-button {
+  display: inline-flex;
   width: 100%;
   align-items: center;
-  gap: 9px;
-  margin: 12px 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #343b4d;
-  font-size: 11px;
-  text-align: left;
-  cursor: pointer;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  margin-top: 14px;
+  border: 1px dashed #cbd5e1 !important;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
 }
 
-.asset-row.selected {
-  color: #765ce8;
-}
-
-.asset-card .lm-avatar {
-  width: 22px;
-  height: 22px;
-}
-
-.asset-card em {
-  color: #7f8696;
-  font-style: normal;
-}
-
-.asset-row small {
-  display: block;
-  margin-top: 3px;
-  color: #8b91a1;
-  font-size: 9px;
-}
-
-.inline-actions {
+.compact-card {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  min-height: 320px;
+  flex-direction: column;
 }
 
-.inline-actions button {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #f6f7fc;
-  color: #765ce8;
-  font-size: 10px;
-}
-
-.oss-card h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 15px;
-  color: #222839;
-  font-size: 13px;
-}
-
-.oss-card dl {
+.mini-head,
+.task-item {
   display: grid;
-  grid-template-columns: 70px minmax(0, 1fr);
+  grid-template-columns: 36px minmax(0, 1fr) 42px 80px;
   gap: 10px;
-  color: #596174;
-  font-size: 11px;
+  align-items: center;
 }
 
-.oss-card dt {
-  color: #8b91a1;
+.mini-head {
+  grid-template-columns: minmax(0, 1fr) 124px;
+  margin-bottom: 10px;
 }
 
-.oss-card dd {
-  margin: 0;
+.mini-head span:last-child {
   text-align: right;
 }
 
-.ai-setting-card p {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 12px 0;
-  color: #343b4d;
-  font-size: 11px;
+.task-list,
+.asset-list,
+.ai-list {
+  flex: 1;
+  overflow: auto;
 }
 
-.ai-setting-card button {
-  border: 0;
-  background: transparent;
-  color: #765ce8;
-  font-size: 11px;
-  cursor: pointer;
+.task-item {
+  min-height: 48px;
 }
 
-.ai-setting-card .lm-switch {
-  position: relative;
-  display: inline-flex;
+.task-item em {
+  justify-self: end;
+  padding: 3px 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.task-item em.weekly {
+  border-color: #fbcfe8;
+  background: #fdf2f8;
+  color: #db2777;
+}
+
+.task-item time {
+  color: #94a3b8;
+  font-size: 11px;
+  text-align: right;
+}
+
+.asset-list button {
+  grid-template-columns: 34px minmax(0, 1fr) auto 16px;
+  gap: 10px;
+  min-height: 54px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.asset-list img {
   width: 34px;
-  height: 18px;
-  padding: 2px;
-  border-radius: 999px;
-  background: #765ce8;
-}
-
-.ai-setting-card .lm-switch i {
-  width: 14px;
-  height: 14px;
-  transform: translateX(16px);
+  height: 34px;
+  border: 1px solid #e2e8f0;
   border-radius: 50%;
   background: #fff;
+}
+
+.asset-list span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.asset-list i {
+  padding: 2px 6px;
+  border: 1px solid #dfe4ff;
+  border-radius: 4px;
+  background: #eef2ff;
+  color: var(--primary);
+  font-size: 10px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.asset-list em {
+  color: #64748b;
+  font-size: 12px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.text-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 14px;
+  background: transparent;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.oss-provider {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.oss-provider strong {
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.oss-provider em {
+  color: #10b981;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.oss-card dl {
+  gap: 12px;
+  font-size: 13px;
+}
+
+.oss-card dd {
+  text-align: right;
+}
+
+.split-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.split-actions button {
+  min-height: 38px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.split-actions button:last-child {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+}
+
+.ai-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  width: 38px;
+  height: 22px;
+  flex: 0 0 38px;
+  align-items: center;
+  padding: 2px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background 0.18s ease;
+}
+
+.toggle-switch.active {
+  background: var(--primary);
+}
+
+.toggle-switch i {
+  width: 18px;
+  height: 18px;
+  transform: translateX(0);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
   transition: transform 0.18s ease;
 }
 
-.ai-setting-card .lm-switch.off {
-  background: #d8dce8;
+.toggle-switch.active i {
+  transform: translateX(16px);
 }
 
-.ai-setting-card .lm-switch.off i {
-  transform: translateX(0);
-}
-
-.integration-card {
-  grid-column: 1 / -1;
-}
-
-.integration-card > div:last-child {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 15px;
-}
-
-.integration-card button {
+.integration-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 40px;
-  margin: 0;
-  border: 1px solid #edf0f6;
-  border-radius: 7px;
-  background: #fff;
-  color: #343b4d;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.integration-card span {
-  color: #31a978;
-}
-
-.delete-confirm {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
   gap: 12px;
-  align-items: start;
-  color: #596174;
+  margin-top: 20px;
+  padding: 16px;
 }
 
-.delete-confirm .svg-icon {
-  color: #e66591;
-  font-size: 28px;
+.integration-title {
+  display: grid;
+  gap: 4px;
+  min-width: 160px;
+  margin-right: 6px;
 }
 
-.delete-confirm p {
+.integration-title strong {
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.integration-bar > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.integration-bar .tone-icon {
+  width: 26px;
+  height: 26px;
+  flex-basis: 26px;
+  border-radius: 6px;
+}
+
+.integration-bar .tone-icon .svg-icon {
+  font-size: 16px;
+}
+
+.integration-bar em {
+  color: #10b981;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.add-integration {
+  border-style: dashed !important;
+  color: var(--muted) !important;
+}
+
+.footer-actions {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.footer-actions button {
+  min-width: 92px;
+  min-height: 40px;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-weight: 750;
+}
+
+.footer-actions button:first-child {
+  border: 1px solid #e2e8f0;
+}
+
+.footer-actions button:last-child {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.18);
+}
+
+.demo-modal-content {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: #475569;
+}
+
+.demo-modal-content .svg-icon {
+  flex: 0 0 auto;
+  color: var(--primary);
+  font-size: 24px;
+}
+
+.demo-modal-content p {
   margin: 0;
   font-size: 13px;
   line-height: 1.7;
 }
 
-.manage-form {
-  display: grid;
-  gap: 12px;
-}
-
-.manage-form label {
-  display: grid;
-  gap: 6px;
-}
-
-.manage-form span {
-  color: #7f8696;
-  font-size: 12px;
-}
-
-.manage-form input,
-.manage-form select {
-  width: 100%;
-  height: 36px;
-  border: 1px solid #e6e9f3;
-  border-radius: 8px;
-  background: #fff;
-  color: #202636;
-  font-size: 13px;
-}
-
-@media (max-width: 1180px) {
-  .nikki-manage-hero,
-  .nikki-manage-grid,
-  .integration-card > div:last-child {
+@media (max-width: 1360px) {
+  .top-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .stat-strip,
-  .hero-fields {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .reminder-card {
+    grid-column: 1 / -1;
+  }
+
+  .module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .top-grid,
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .integration-bar,
+  .footer-actions {
+    align-items: stretch;
+  }
+
+  .footer-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .footer-actions button {
+    flex: 1;
   }
 }
 </style>

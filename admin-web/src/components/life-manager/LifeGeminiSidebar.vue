@@ -14,24 +14,29 @@
       <div class="px-3 overflow-y-auto" style="max-height: calc(100vh - 200px)">
         <template v-for="(group, groupIndex) in resolvedMenuGroups" :key="groupIndex">
           <div v-if="groupIndex > 0" class="my-4 border-t border-slate-200/60 mx-4"></div>
-          <div
+          <button
             v-for="item in group"
             :key="item.label"
             :class="[
-              'flex items-center justify-between px-4 py-3 mb-1 rounded-xl cursor-pointer transition-colors',
-              item.active
+              'w-full appearance-none border-0 flex items-center justify-between px-4 py-3 mb-1 rounded-xl transition-colors text-left',
+              isItemActive(item)
                 ? 'bg-indigo-500 text-white'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                : item.routeKey
+                  ? 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800 cursor-pointer'
+                  : 'bg-transparent text-slate-400 cursor-not-allowed opacity-60'
             ]"
+            type="button"
+            :disabled="!item.routeKey"
+            @click="navigateByRouteKey(item.routeKey)"
           >
             <div class="flex items-center space-x-3">
-              <component :is="item.icon" :size="18" :class="item.active ? 'text-white' : 'text-slate-400'" />
+              <component :is="item.icon" :size="18" :class="isItemActive(item) ? 'text-white' : 'text-slate-400'" />
               <span class="font-medium text-sm">{{ item.label }}</span>
             </div>
             <span v-if="item.badge" class="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
               {{ item.badge }}
             </span>
-          </div>
+          </button>
         </template>
       </div>
     </div>
@@ -54,6 +59,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { BookOpen, Bot, CalendarDays, FolderKanban, Gamepad2, Home, ListTodo, PenSquare, Plane, Settings, Wallet } from 'lucide-vue-next';
+import type { RouteKey } from '@elegant-router/types';
+import { useRoute } from 'vue-router';
+import { useRouterPush } from '@/hooks/common/router';
 import type { LifeGeminiMenuItem } from './types';
 
 defineOptions({
@@ -76,10 +84,13 @@ const props = withDefaults(
   }
 );
 
+const route = useRoute();
+const { routerPushByKey } = useRouterPush();
+
 const defaultMenuGroups: LifeGeminiMenuItem[][] = [
   [
-    { icon: Home, label: '首页' },
-    { icon: FolderKanban, label: '项目', active: true },
+    { icon: Home, label: '首页', routeKey: 'home' },
+    { icon: FolderKanban, label: '项目', routeKey: 'projects' },
     { icon: CalendarDays, label: '日程', badge: '2' },
     { icon: ListTodo, label: '清单' },
     { icon: PenSquare, label: '记录' }
@@ -97,4 +108,18 @@ const defaultMenuGroups: LifeGeminiMenuItem[][] = [
 ];
 
 const resolvedMenuGroups = computed(() => props.menuGroups?.length ? props.menuGroups : defaultMenuGroups);
+
+function navigateByRouteKey(routeKey?: RouteKey) {
+  if (!routeKey) return;
+  routerPushByKey(routeKey);
+}
+
+function isItemActive(item: LifeGeminiMenuItem) {
+  if (item.active) return true;
+
+  if (item.routeKey === 'home') return route.path === '/life/home';
+  if (item.routeKey === 'projects') return route.path === '/life/projects' || route.path.startsWith('/life/project/');
+
+  return false;
+}
 </script>

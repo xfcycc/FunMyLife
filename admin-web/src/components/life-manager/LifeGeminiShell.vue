@@ -2,7 +2,11 @@
   <div class="life-gemini-page flex h-screen bg-slate-50/50 font-sans text-slate-800 overflow-hidden">
     <LifeGeminiSidebar :menu-groups="menuGroups" />
     <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
-      <LifeGeminiTopActions />
+      <LifeGeminiPageHeader :title="title" :description="description" :breadcrumbs="breadcrumbs">
+        <template v-if="$slots.actions" #actions>
+          <slot name="actions" />
+        </template>
+      </LifeGeminiPageHeader>
       <div class="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
         <slot />
       </div>
@@ -11,9 +15,9 @@
 </template>
 
 <script setup lang="ts">
+import LifeGeminiPageHeader from './LifeGeminiPageHeader.vue';
 import LifeGeminiSidebar from './LifeGeminiSidebar.vue';
-import LifeGeminiTopActions from './LifeGeminiTopActions.vue';
-import type { LifeGeminiMenuItem } from './types';
+import type { LifeGeminiBreadcrumbItem, LifeGeminiMenuItem } from './types';
 
 defineOptions({
   name: 'LifeGeminiShell'
@@ -21,6 +25,9 @@ defineOptions({
 
 defineProps<{
   menuGroups?: LifeGeminiMenuItem[][];
+  title?: string;
+  description?: string;
+  breadcrumbs?: LifeGeminiBreadcrumbItem[];
 }>();
 </script>
 
