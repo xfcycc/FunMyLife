@@ -402,27 +402,34 @@ function scrollList(target: 'day' | 'doc' | 'notice', direction: 'left' | 'right
 </script>
 
 <template>
-  <LifeAppShell active="管理" avatar="default">
+  <LifeAppShell
+    active="管理"
+    avatar="default"
+    title="日本旅行管理"
+    description="管理行程规划、同行人员、清单模板、资产资料与图册同步。"
+    :breadcrumbs="[
+      { label: '首页', routeKey: 'home' },
+      { label: '项目', routeKey: 'projects' },
+      { label: '日本旅行 2026', routeKey: 'japan-travel' },
+      { label: '管理' }
+    ]"
+  >
     <LifeToastHost :items="toasts" @close="removeToast" />
 
-    <header class="manage-top lm-topbar">
-      <div class="lm-title">
-        <p>项目　/　日本旅行 2026　/　管理</p>
-        <button class="lm-plain-btn" type="button" @click="backToProject">← 返回项目详情</button>
-        <h1>项目管理 <span>🌸</span></h1>
-      </div>
-      <div class="lm-actions">
-        <button class="lm-icon-btn" type="button" aria-label="搜索配置" @click="info('搜索配置', '可继续接入行程、预算和资料搜索')">
-          <SvgIcon icon="material-symbols:search-rounded" />
-        </button>
-        <button class="lm-icon-btn" type="button" aria-label="查看提醒" @click="scrollList('notice', 'down')">
-          <SvgIcon icon="material-symbols:notifications-outline-rounded" />
-        </button>
-        <button class="lm-purple-btn round-only" type="button" @click="openModal('day', 'create')">
-          <SvgIcon icon="material-symbols:add-rounded" />
-        </button>
-      </div>
-    </header>
+    <template #actions>
+      <button class="lm-plain-btn" type="button" @click="backToProject">← 返回项目详情</button>
+      <button class="lm-plain-btn" type="button" @click="backToProject">预览项目概览</button>
+      <button class="lm-icon-btn" type="button" aria-label="搜索配置" @click="info('搜索配置', '可继续接入行程、预算和资料搜索')">
+        <SvgIcon icon="material-symbols:search-rounded" />
+      </button>
+      <button class="lm-icon-btn" type="button" aria-label="查看提醒" @click="scrollList('notice', 'down')">
+        <SvgIcon icon="material-symbols:notifications-outline-rounded" />
+      </button>
+      <button class="lm-plain-btn" type="button" @click="success('配置已导出', '日本旅行 2026')">导出项目配置</button>
+      <button class="lm-purple-btn round-only" type="button" aria-label="新建行程配置" @click="openModal('day', 'create')">
+        <SvgIcon icon="material-symbols:add-rounded" />
+      </button>
+    </template>
 
     <section class="manage-hero lm-card">
       <div class="manage-cover lm-cover japan"></div>
@@ -619,8 +626,6 @@ function scrollList(target: 'day' | 'doc' | 'notice', direction: 'left' | 'right
     <footer class="lm-bottom-bar">
       <button class="lm-plain-btn" type="button" @click="resetConfig">重置配置</button>
       <span>{{ autoSave ? '✓ 自动保存已开启' : '自动保存已关闭' }}</span>
-      <button class="lm-plain-btn" type="button" @click="backToProject">预览项目概览</button>
-      <button class="lm-plain-btn" type="button" @click="success('配置已导出', '日本旅行 2026')">导出项目配置</button>
       <button class="lm-purple-btn" type="button" @click="saveConfig">保存配置</button>
     </footer>
 
@@ -664,10 +669,6 @@ function scrollList(target: 'day' | 'doc' | 'notice', direction: 'left' | 'right
   width: 36px;
   padding: 0;
   border-radius: 50%;
-}
-
-.manage-top {
-  margin-bottom: 12px;
 }
 
 .manage-hero {
