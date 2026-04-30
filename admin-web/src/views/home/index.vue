@@ -212,31 +212,30 @@ function addTimelineEvent() {
 </script>
 
 <template>
-  <LifeAppShell active="首页">
+  <LifeAppShell
+    active="首页"
+    title="上午好，夏目悠然 ☀️"
+    description="新的一天，从有序开始"
+    :breadcrumbs="[{ label: '首页' }]"
+  >
     <LifeToastHost :items="toasts" @close="removeToast" />
 
-    <header class="lm-topbar home-top">
-      <div class="lm-title">
-        <h1>上午好，夏目悠然 ☀️</h1>
-        <p>新的一天，从有序开始</p>
-      </div>
-      <div class="lm-actions">
-        <button class="lm-pill weather-pill" type="button" @click="switchWeather">
-          <span>{{ currentWeatherLabel }}</span>
-          <strong>{{ currentWeatherValue }}</strong>
-          <SvgIcon :icon="weatherMode === 'today' ? 'material-symbols:partly-cloudy-day-rounded' : 'material-symbols:luggage-rounded'" />
-        </button>
-        <button class="lm-icon-btn" type="button" aria-label="搜索" @click="runQuickAction('搜索')">
-          <SvgIcon icon="material-symbols:search-rounded" />
-        </button>
-        <button class="lm-icon-btn dot" type="button" aria-label="定位实时状态" @click="scrollToRealtime">
-          <SvgIcon icon="material-symbols:notifications-outline-rounded" />
-        </button>
-        <button class="lm-purple-btn round-only" type="button" @click="openTodoModal">
-          <SvgIcon icon="material-symbols:add-rounded" />
-        </button>
-      </div>
-    </header>
+    <template #actions>
+      <button class="lm-pill weather-pill" type="button" @click="switchWeather">
+        <span>{{ currentWeatherLabel }}</span>
+        <strong>{{ currentWeatherValue }}</strong>
+        <SvgIcon :icon="weatherMode === 'today' ? 'material-symbols:partly-cloudy-day-rounded' : 'material-symbols:luggage-rounded'" />
+      </button>
+      <button class="lm-icon-btn" type="button" aria-label="搜索" @click="runQuickAction('搜索')">
+        <SvgIcon icon="material-symbols:search-rounded" />
+      </button>
+      <button class="lm-icon-btn dot" type="button" aria-label="定位实时状态" @click="scrollToRealtime">
+        <SvgIcon icon="material-symbols:notifications-outline-rounded" />
+      </button>
+      <button class="lm-purple-btn round-only" type="button" aria-label="新增待办" @click="openTodoModal">
+        <SvgIcon icon="material-symbols:add-rounded" />
+      </button>
+    </template>
 
     <section class="summary-switch">
       <button :class="{ active: summaryRange === 'today' }" type="button" @click="switchRange('today')">今日</button>
