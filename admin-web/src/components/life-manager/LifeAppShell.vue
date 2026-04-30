@@ -208,19 +208,25 @@ function isProjectItemActive(item: ProjectItem) {
 <style scoped>
 .lm-shell-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 18px;
-  margin-bottom: 18px;
+  min-height: 102px;
+  margin-bottom: 20px;
+  padding: 10px 0 18px;
+  box-sizing: border-box;
 }
 
 .lm-shell-title {
   min-width: 0;
+  padding-top: 2px;
 }
 
 .lm-shell-head .lm-actions {
+  align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
+  row-gap: 8px;
 }
 
 .lm-breadcrumb {
@@ -264,7 +270,9 @@ function isProjectItemActive(item: ProjectItem) {
 
 @media (max-width: 1320px) {
   .lm-shell-head {
+    align-items: flex-start;
     flex-direction: column;
+    min-height: 0;
   }
 
   .lm-shell-head .lm-actions {
