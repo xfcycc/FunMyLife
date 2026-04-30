@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import type { RouteKey } from '@elegant-router/types';
+import { useRoute } from 'vue-router';
+import { useRouterPush } from '@/hooks/common/router';
 
 defineOptions({
   name: 'LifeAppShell'
@@ -18,9 +21,24 @@ const props = withDefaults(
   }
 );
 
+interface NavItem {
+  label: string;
+  icon: string;
+  routeKey?: RouteKey;
+}
+
+interface ProjectItem {
+  label: string;
+  icon: string;
+  routeKey?: RouteKey;
+}
+
+const route = useRoute();
+const { routerPushByKey } = useRouterPush();
+
 const navItems = [
-  { label: '首页', icon: 'material-symbols:home-outline-rounded' },
-  { label: '项目', icon: 'material-symbols:calendar-month-outline-rounded' },
+  { label: '首页', icon: 'material-symbols:home-outline-rounded', routeKey: 'home' },
+  { label: '项目', icon: 'material-symbols:calendar-month-outline-rounded', routeKey: 'projects' },
   { label: '日程', icon: 'material-symbols:calendar-today-outline-rounded' },
   { label: '清单', icon: 'material-symbols:checklist-rounded' },
   { label: '待办清单', icon: 'material-symbols:edit-square-outline-rounded' },
@@ -36,7 +54,7 @@ const navItems = [
   { label: '集成中心', icon: 'material-symbols:hive-outline-rounded' },
   { label: '统计', icon: 'material-symbols:donut-large-outline-rounded' },
   { label: '设置', icon: 'material-symbols:settings-outline-rounded' }
-];
+] satisfies NavItem[];
 
 const defaultNav = ['首页', '项目', '日程', '清单', '资产', '记录', '笔记', '图册', 'AI 助手', '设置'];
 const nikkiNav = ['首页', '项目', '日程', '清单', '倒计时', '资产', '记录', '笔记', '图册', 'AI 助手', '设置'];
@@ -51,12 +69,35 @@ const visibleLabels = computed(() => {
 const visibleNavItems = computed(() => navItems.filter(item => visibleLabels.value.includes(item.label)));
 
 const projectItems = [
-  { label: '无限暖暖', icon: '🌸' },
-  { label: '日本旅行 2026', icon: '⛩️' },
+  { label: '无限暖暖', icon: '🌸', routeKey: 'infinity-nikki' },
+  { label: '日本旅行 2026', icon: '⛩️', routeKey: 'japan-travel' },
   { label: '原神', icon: '🎮' },
   { label: '家庭保险', icon: '🛡️' },
   { label: 'OpenAI 学习计划', icon: '🧠' }
-];
+] satisfies ProjectItem[];
+
+function navigateByRouteKey(routeKey?: RouteKey) {
+  if (!routeKey) return;
+  routerPushByKey(routeKey);
+}
+
+function isNavItemActive(item: NavItem) {
+  const path = route.path;
+
+  if (item.routeKey === 'home') return path === '/life/home';
+  if (item.routeKey === 'projects') return path === '/life/projects' || path.startsWith('/life/project/');
+
+  return false;
+}
+
+function isProjectItemActive(item: ProjectItem) {
+  const path = route.path;
+
+  if (item.routeKey === 'infinity-nikki') return path.startsWith('/life/project/infinity-nikki');
+  if (item.routeKey === 'japan-travel') return path.startsWith('/life/project/japan-travel');
+
+  return false;
+}
 </script>
 
 <template>
@@ -75,7 +116,10 @@ const projectItems = [
           v-for="item in visibleNavItems"
           :key="item.label"
           class="lm-nav-item"
-          :class="{ active: item.label === active || (active === '管理' && item.label === '项目') }"
+          :class="{ active: isNavItemActive(item) }"
+          :disabled="!item.routeKey"
+          type="button"
+          @click="navigateByRouteKey(item.routeKey)"
         >
           <SvgIcon :icon="item.icon" />
           <span>{{ item.label }}</span>
@@ -85,9 +129,16 @@ const projectItems = [
       <section v-if="showProjects" class="lm-project-rail">
         <div class="lm-rail-title">
           <span>我的项目</span>
-          <button>+</button>
+          <button type="button" disabled>+</button>
         </div>
-        <button v-for="item in projectItems" :key="item.label" :class="{ active: item.label === active }">
+        <button
+          v-for="item in projectItems"
+          :key="item.label"
+          :class="{ active: isProjectItemActive(item) }"
+          :disabled="!item.routeKey"
+          type="button"
+          @click="navigateByRouteKey(item.routeKey)"
+        >
           <span>{{ item.icon }}</span>
           {{ item.label }}
         </button>

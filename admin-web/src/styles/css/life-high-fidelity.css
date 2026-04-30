@@ -103,6 +103,13 @@
   color: #fff;
 }
 
+.lm-nav-item:disabled:not(.active),
+.lm-rail-title button:disabled,
+.lm-project-rail > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
 .lm-project-rail {
   display: grid;
   gap: 5px;
