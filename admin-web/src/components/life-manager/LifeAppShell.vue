@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import type { RouteKey } from '@elegant-router/types';
 import { useRoute } from 'vue-router';
+import { lifeUnavailableFeedback } from '@/hooks/business/lifeFeedback';
 import { useRouterPush } from '@/hooks/common/router';
 
 defineOptions({
@@ -81,6 +82,10 @@ function navigateByRouteKey(routeKey?: RouteKey) {
   routerPushByKey(routeKey);
 }
 
+function getUnavailableHint(label: string) {
+  return lifeUnavailableFeedback.hint(label);
+}
+
 function isNavItemActive(item: NavItem) {
   const path = route.path;
 
@@ -118,6 +123,8 @@ function isProjectItemActive(item: ProjectItem) {
           class="lm-nav-item"
           :class="{ active: isNavItemActive(item) }"
           :disabled="!item.routeKey"
+          :title="!item.routeKey ? getUnavailableHint(item.label) : undefined"
+          :aria-label="!item.routeKey ? getUnavailableHint(item.label) : item.label"
           type="button"
           @click="navigateByRouteKey(item.routeKey)"
         >
@@ -129,13 +136,15 @@ function isProjectItemActive(item: ProjectItem) {
       <section v-if="showProjects" class="lm-project-rail">
         <div class="lm-rail-title">
           <span>我的项目</span>
-          <button type="button" disabled>+</button>
+          <button type="button" :title="getUnavailableHint('新增项目')" aria-label="新增项目暂未接入，后续开放" disabled>+</button>
         </div>
         <button
           v-for="item in projectItems"
           :key="item.label"
           :class="{ active: isProjectItemActive(item) }"
           :disabled="!item.routeKey"
+          :title="!item.routeKey ? getUnavailableHint(item.label) : undefined"
+          :aria-label="!item.routeKey ? getUnavailableHint(item.label) : item.label"
           type="button"
           @click="navigateByRouteKey(item.routeKey)"
         >

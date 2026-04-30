@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
 import { useRouterPush } from '@/hooks/common/router';
-import { useLifeToast } from '@/hooks/business/lifeFeedback';
+import { lifeUnavailableFeedback, useLifeToast } from '@/hooks/business/lifeFeedback';
 
 defineOptions({
   name: 'Projects'
@@ -391,6 +391,14 @@ function navigateByRouteKey(routeKey?: RouteKey) {
   routerPushByKey(routeKey);
 }
 
+function getUnavailableHint(label: string) {
+  return lifeUnavailableFeedback.hint(label);
+}
+
+function showUnavailable(label: string) {
+  info(lifeUnavailableFeedback.title, lifeUnavailableFeedback.message(label));
+}
+
 function isNavItemActive(item: NavItem) {
   const path = route.path;
 
@@ -426,7 +434,7 @@ function openProject(item: ProjectItem) {
     return;
   }
 
-  info('项目详情待接入', item.name);
+  showUnavailable(`${item.name}详情`);
 }
 
 function openProjectManage(item: ProjectItem) {
@@ -610,6 +618,8 @@ function saveProject() {
           class="pm-nav-item"
           :class="{ active: isNavItemActive(item) }"
           :disabled="!item.routeKey"
+          :title="!item.routeKey ? getUnavailableHint(item.label) : undefined"
+          :aria-label="!item.routeKey ? getUnavailableHint(item.label) : item.label"
           type="button"
           @click="navigateByRouteKey(item.routeKey)"
         >
@@ -636,10 +646,10 @@ function saveProject() {
       </div>
 
       <div class="pm-sidebar-tools">
-        <button aria-label="夜间模式" type="button" @click="info('夜间模式演示', '这里可接入主题切换')"><SvgIcon icon="material-symbols:dark-mode-outline-rounded" /></button>
-        <button aria-label="通知" type="button" @click="info('通知中心', '你有 3 条待处理提醒')"><SvgIcon icon="material-symbols:notifications-outline-rounded" /></button>
-        <button aria-label="帮助" type="button" @click="info('帮助中心', '这里可跳转到项目使用说明')"><SvgIcon icon="material-symbols:help-outline-rounded" /></button>
-        <button aria-label="扩展" type="button" @click="info('扩展演示', '支持继续接入更多业务模块')"><SvgIcon icon="material-symbols:dashboard-customize-outline-rounded" /></button>
+        <button aria-label="夜间模式" type="button" @click="showUnavailable('夜间模式')"><SvgIcon icon="material-symbols:dark-mode-outline-rounded" /></button>
+        <button aria-label="通知" type="button" @click="showUnavailable('通知中心')"><SvgIcon icon="material-symbols:notifications-outline-rounded" /></button>
+        <button aria-label="帮助" type="button" @click="showUnavailable('帮助中心')"><SvgIcon icon="material-symbols:help-outline-rounded" /></button>
+        <button aria-label="扩展" type="button" @click="showUnavailable('扩展中心')"><SvgIcon icon="material-symbols:dashboard-customize-outline-rounded" /></button>
       </div>
     </aside>
 
@@ -673,10 +683,10 @@ function saveProject() {
             </select>
           </label>
           <button class="pm-primary" type="button" @click="openCreateModal"><SvgIcon icon="material-symbols:add-rounded" />新建项目</button>
-          <button class="pm-icon-button has-dot" aria-label="通知" type="button" @click="info('项目通知', '最新提醒已同步')">
+          <button class="pm-icon-button has-dot" aria-label="通知" type="button" @click="showUnavailable('项目通知')">
             <SvgIcon icon="material-symbols:notifications-outline-rounded" />
           </button>
-          <button class="pm-user" aria-label="用户头像" type="button" @click="info('个人中心', '这里可打开账号侧边栏')"></button>
+          <button class="pm-user" aria-label="用户头像" type="button" @click="showUnavailable('个人中心')"></button>
         </div>
       </header>
 
@@ -788,7 +798,7 @@ function saveProject() {
               <strong>项目是你的生活容器</strong>
               将分散在日程、清单、资产、笔记、图册、AI 等模块的内容汇聚在一起，形成完整的项目视图。
             </p>
-            <button type="button" @click="info('项目说明', '这里可以打开项目设计文档或帮助面板')">了解更多</button>
+            <button type="button" @click="showUnavailable('项目说明')">了解更多</button>
           </div>
         </section>
 
@@ -796,7 +806,7 @@ function saveProject() {
           <section class="pm-panel">
             <div class="pm-panel-head">
               <h2>最近更新</h2>
-              <button type="button" @click="info('最近更新', '这里可跳转到完整动态流')">查看全部</button>
+              <button type="button" @click="showUnavailable('最近更新')">查看全部</button>
             </div>
             <div class="pm-update-list">
               <article v-for="item in recentUpdates" :key="item.title + item.time" class="pm-update">
@@ -813,7 +823,7 @@ function saveProject() {
           <section class="pm-panel">
             <div class="pm-panel-head">
               <h2>项目模板</h2>
-              <button type="button" @click="openCreateModal">新建模板</button>
+              <button type="button" @click="showUnavailable('新建模板')">新建模板</button>
             </div>
             <div class="pm-template-list">
               <article v-for="item in templates" :key="item.title" class="pm-template">
@@ -824,7 +834,7 @@ function saveProject() {
                 </div>
               </article>
             </div>
-            <button class="pm-all-template" type="button" @click="info('模板中心', '这里可管理全部模板')">
+            <button class="pm-all-template" type="button" @click="showUnavailable('模板中心')">
               查看全部模板 <SvgIcon icon="material-symbols:arrow-forward-rounded" />
             </button>
           </section>

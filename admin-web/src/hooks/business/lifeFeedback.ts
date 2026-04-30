@@ -10,6 +10,12 @@ export interface LifeToastOptions {
 
 let seed = 0;
 
+export const lifeUnavailableFeedback = {
+  title: '功能暂未接入',
+  message: (label: string) => `${label}暂未接入，后续开放。`,
+  hint: (label: string) => `${label}暂未接入，后续开放`
+} as const;
+
 export function useLifeToast() {
   const toasts = ref<LifeToastItem[]>([]);
 
