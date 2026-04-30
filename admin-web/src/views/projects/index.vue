@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import type { RouteKey } from '@elegant-router/types';
+import { useRoute } from 'vue-router';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
 import { useRouterPush } from '@/hooks/common/router';
@@ -26,12 +28,19 @@ interface ProjectItem {
   archived?: boolean;
 }
 
+interface NavItem {
+  label: string;
+  icon: string;
+  routeKey?: RouteKey;
+}
+
 const { toasts, removeToast, success, info, warning } = useLifeToast();
+const route = useRoute();
 const { routerPushByKey } = useRouterPush();
 
 const navItems = [
-  { label: '首页', icon: 'material-symbols:home-outline-rounded' },
-  { label: '项目', icon: 'material-symbols:calendar-month-outline-rounded', active: true },
+  { label: '首页', icon: 'material-symbols:home-outline-rounded', routeKey: 'home' },
+  { label: '项目', icon: 'material-symbols:calendar-month-outline-rounded', routeKey: 'projects' },
   { label: '日程', icon: 'material-symbols:calendar-today-outline-rounded' },
   { label: '清单', icon: 'material-symbols:select-check-box-outline-rounded' },
   { label: '记录', icon: 'material-symbols:edit-square-outline-rounded' },
@@ -39,7 +48,7 @@ const navItems = [
   { label: 'AI 助手', icon: 'material-symbols:smart-toy-outline-rounded' },
   { label: '数据统计', icon: 'material-symbols:donut-large-outline-rounded' },
   { label: '设置', icon: 'material-symbols:settings-outline-rounded' }
-];
+] satisfies NavItem[];
 
 const statCards = [
   {
@@ -377,6 +386,20 @@ function getProjectSource(name: string) {
   return projectItems.value.find(item => item.name === name) || extraProjects.value.find(item => item.name === name);
 }
 
+function navigateByRouteKey(routeKey?: RouteKey) {
+  if (!routeKey) return;
+  routerPushByKey(routeKey);
+}
+
+function isNavItemActive(item: NavItem) {
+  const path = route.path;
+
+  if (item.routeKey === 'home') return path === '/life/home';
+  if (item.routeKey === 'projects') return path === '/life/projects' || path.startsWith('/life/project/');
+
+  return false;
+}
+
 const projectRouteKeyMap = {
   无限暖暖: 'infinity-nikki',
   '日本旅行 2026': 'japan-travel'
@@ -581,7 +604,15 @@ function saveProject() {
       </div>
 
       <nav class="pm-nav" aria-label="主导航">
-        <button v-for="item in navItems" :key="item.label" class="pm-nav-item" :class="{ active: item.active }" type="button">
+        <button
+          v-for="item in navItems"
+          :key="item.label"
+          class="pm-nav-item"
+          :class="{ active: isNavItemActive(item) }"
+          :disabled="!item.routeKey"
+          type="button"
+          @click="navigateByRouteKey(item.routeKey)"
+        >
           <SvgIcon :icon="item.icon" />
           <span>{{ item.label }}</span>
         </button>
@@ -908,26 +939,26 @@ button {
 
 .pm-nav {
   display: grid;
-  gap: 8px;
+  gap: 5px;
 }
 
 .pm-nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 44px;
-  padding: 0 14px;
-  border-radius: 8px;
+  gap: 11px;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 6px;
   background: transparent;
-  color: #565d6f;
-  font-size: 14px;
+  color: #4c5366;
+  font-size: 12px;
   text-align: left;
 }
 
 .pm-nav-item .svg-icon {
-  width: 19px;
-  height: 19px;
-  color: #606779;
+  width: 15px;
+  height: 15px;
+  color: #5b6476;
 }
 
 .pm-nav-item.active {
@@ -938,6 +969,11 @@ button {
 
 .pm-nav-item.active .svg-icon {
   color: #fff;
+}
+
+.pm-nav-item:disabled:not(.active) {
+  cursor: not-allowed;
+  opacity: 0.46;
 }
 
 .pm-profile {
