@@ -388,26 +388,33 @@ function scrollList(target: 'rule' | 'template' | 'material', direction: 'up' | 
 </script>
 
 <template>
-  <LifeAppShell active="无限暖暖" avatar="nikki">
+  <LifeAppShell
+    active="无限暖暖"
+    avatar="nikki"
+    title="无限暖暖管理"
+    description="记录游戏日常、活动、版本与养成进度，管理账号与相关资源。"
+    :breadcrumbs="[
+      { label: '首页', routeKey: 'home' },
+      { label: '项目', routeKey: 'projects' },
+      { label: '无限暖暖', routeKey: 'infinity-nikki' },
+      { label: '管理' }
+    ]"
+  >
     <LifeToastHost :items="toasts" @close="removeToast" />
 
-    <header class="nikki-manage-top lm-topbar">
-      <div class="lm-title">
-        <button class="lm-plain-btn" type="button" @click="backToProject">← 返回项目详情</button>
-        <h1>项目 / 无限暖暖 / 管理</h1>
-      </div>
-      <div class="lm-actions">
-        <button class="lm-icon-btn" type="button" aria-label="搜索配置" @click="info('搜索配置', '可继续接入配置项搜索')">
-          <SvgIcon icon="material-symbols:search-rounded" />
-        </button>
-        <button class="lm-icon-btn" type="button" aria-label="查看提醒" @click="scrollList('rule', 'down')">
-          <SvgIcon icon="material-symbols:notifications-outline-rounded" />
-        </button>
-        <button class="lm-purple-btn" type="button" @click="openModal('template', 'create')">
-          <SvgIcon icon="material-symbols:add-rounded" />新建
-        </button>
-      </div>
-    </header>
+    <template #actions>
+      <button class="lm-plain-btn" type="button" @click="backToProject">← 返回项目详情</button>
+      <button class="lm-plain-btn" type="button" @click="backToProject">预览项目概览</button>
+      <button class="lm-icon-btn" type="button" aria-label="搜索配置" @click="info('搜索配置', '可继续接入配置项搜索')">
+        <SvgIcon icon="material-symbols:search-rounded" />
+      </button>
+      <button class="lm-icon-btn" type="button" aria-label="查看提醒" @click="scrollList('rule', 'down')">
+        <SvgIcon icon="material-symbols:notifications-outline-rounded" />
+      </button>
+      <button class="lm-purple-btn" type="button" @click="openModal('template', 'create')">
+        <SvgIcon icon="material-symbols:add-rounded" />新建
+      </button>
+    </template>
 
     <section class="nikki-manage-hero lm-card">
       <div class="top-avatar lm-hero-art nikki"></div>
@@ -662,7 +669,6 @@ function scrollList(target: 'rule' | 'template' | 'material', direction: 'up' | 
 
     <footer class="lm-bottom-bar">
       <button class="lm-plain-btn" type="button" @click="resetLocalConfig">重置</button>
-      <button class="lm-plain-btn" type="button" @click="backToProject">预览项目概览</button>
       <button class="lm-purple-btn" type="button" @click="saveConfig">保存配置</button>
     </footer>
 
@@ -701,10 +707,6 @@ function scrollList(target: 'rule' | 'template' | 'material', direction: 'up' | 
 </template>
 
 <style scoped>
-.nikki-manage-top {
-  margin-bottom: 12px;
-}
-
 .nikki-manage-hero {
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr) 440px;
