@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useSlots } from 'vue';
 import type { RouteKey } from '@elegant-router/types';
 import { useRoute } from 'vue-router';
 import { lifeUnavailableFeedback } from '@/hooks/business/lifeFeedback';
@@ -14,13 +14,24 @@ const props = withDefaults(
     active?: string;
     showProjects?: boolean;
     avatar?: 'default' | 'nikki';
+    title?: string;
+    description?: string;
+    breadcrumbs?: BreadcrumbItem[];
   }>(),
   {
     active: '首页',
     showProjects: false,
-    avatar: 'default'
+    avatar: 'default',
+    title: '',
+    description: '',
+    breadcrumbs: () => []
   }
 );
+
+interface BreadcrumbItem {
+  label: string;
+  routeKey?: RouteKey;
+}
 
 interface NavItem {
   label: string;
@@ -36,6 +47,7 @@ interface ProjectItem {
 
 const route = useRoute();
 const { routerPushByKey } = useRouterPush();
+const slots = useSlots();
 
 const navItems = [
   { label: '首页', icon: 'material-symbols:home-outline-rounded', routeKey: 'home' },
@@ -68,6 +80,7 @@ const visibleLabels = computed(() => {
 });
 
 const visibleNavItems = computed(() => navItems.filter(item => visibleLabels.value.includes(item.label)));
+const hasHeader = computed(() => props.title || props.description || props.breadcrumbs.length > 0 || Boolean(slots.actions));
 
 const projectItems = [
   { label: '无限暖暖', icon: '🌸', routeKey: 'infinity-nikki' },
@@ -80,6 +93,10 @@ const projectItems = [
 function navigateByRouteKey(routeKey?: RouteKey) {
   if (!routeKey) return;
   routerPushByKey(routeKey);
+}
+
+function navigateBreadcrumb(item: BreadcrumbItem) {
+  navigateByRouteKey(item.routeKey);
 }
 
 function getUnavailableHint(label: string) {
@@ -165,7 +182,94 @@ function isProjectItemActive(item: ProjectItem) {
     </aside>
 
     <section class="lm-main">
+      <header v-if="hasHeader" class="lm-shell-head">
+        <div class="lm-shell-title">
+          <nav v-if="breadcrumbs.length" class="lm-breadcrumb" aria-label="面包屑导航">
+            <template v-for="(item, index) in breadcrumbs" :key="item.label">
+              <button v-if="item.routeKey" type="button" @click="navigateBreadcrumb(item)">
+                {{ item.label }}
+              </button>
+              <span v-else>{{ item.label }}</span>
+              <i v-if="index < breadcrumbs.length - 1">/</i>
+            </template>
+          </nav>
+          <h1 v-if="title">{{ title }}</h1>
+          <p v-if="description">{{ description }}</p>
+        </div>
+        <div v-if="$slots.actions" class="lm-actions">
+          <slot name="actions" />
+        </div>
+      </header>
       <slot />
     </section>
   </main>
 </template>
+
+<style scoped>
+.lm-shell-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.lm-shell-title {
+  min-width: 0;
+}
+
+.lm-shell-head .lm-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.lm-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  color: #8a91a3;
+  font-size: 11px;
+}
+
+.lm-breadcrumb button {
+  border: 0;
+  background: transparent;
+  color: #725ae8;
+  cursor: pointer;
+}
+
+.lm-breadcrumb span {
+  color: #6b7284;
+}
+
+.lm-breadcrumb i {
+  color: #b3b8c7;
+  font-style: normal;
+}
+
+.lm-shell-title h1 {
+  margin: 0;
+  color: #0d111d;
+  font-size: 26px;
+  line-height: 1.18;
+  font-weight: 800;
+}
+
+.lm-shell-title p {
+  margin: 9px 0 0;
+  color: #676d7f;
+  font-size: 14px;
+}
+
+@media (max-width: 1320px) {
+  .lm-shell-head {
+    flex-direction: column;
+  }
+
+  .lm-shell-head .lm-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+</style>

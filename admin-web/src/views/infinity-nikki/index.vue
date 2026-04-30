@@ -236,8 +236,33 @@ function scrollList(target: 'task' | 'activity' | 'gallery', direction: 'left' |
 </script>
 
 <template>
-  <LifeAppShell active="无限暖暖" avatar="nikki">
+  <LifeAppShell
+    active="无限暖暖"
+    avatar="nikki"
+    title="无限暖暖"
+    description="收集美好的瞬间，搭配无限的可能"
+    :breadcrumbs="[{ label: '首页', routeKey: 'home' }, { label: '项目', routeKey: 'projects' }, { label: '无限暖暖' }]"
+  >
     <LifeToastHost :items="toasts" @close="removeToast" />
+
+    <template #actions>
+      <button
+        class="lm-purple-btn"
+        type="button"
+        @click="openDetail('task', '快速记录', '记录今天的无限暖暖项目进展，可继续接入真实表单。', ['默认归类：今日', `当前打卡：${dailyDoneCount}/${dailyTotal}`])"
+      >
+        <SvgIcon icon="material-symbols:add-rounded" />快速记录
+      </button>
+      <button class="lm-plain-btn" type="button" @click="success('分享链接已生成', '无限暖暖项目概览')">
+        <SvgIcon icon="material-symbols:ios-share-rounded" />分享
+      </button>
+      <button class="lm-plain-btn" type="button" @click="openManagePage">
+        <SvgIcon icon="material-symbols:settings-outline-rounded" />设置
+      </button>
+      <button class="lm-icon-btn" type="button" aria-label="更多操作" @click="scrollList('activity', 'down')">
+        <SvgIcon icon="material-symbols:more-horiz-rounded" />
+      </button>
+    </template>
 
     <header class="nikki-head lm-card">
       <div class="nikki-hero-img lm-hero-art nikki"></div>
@@ -252,24 +277,6 @@ function scrollList(target: 'task' | 'activity' | 'gallery', direction: 'left' |
           <span>项目笔记 <b>12</b></span>
           <span>图册数量 <b>8</b></span>
         </div>
-      </div>
-      <div class="lm-actions">
-        <button
-          class="lm-purple-btn"
-          type="button"
-          @click="openDetail('task', '快速记录', '记录今天的无限暖暖项目进展，可继续接入真实表单。', ['默认归类：今日', `当前打卡：${dailyDoneCount}/${dailyTotal}`])"
-        >
-          <SvgIcon icon="material-symbols:add-rounded" />快速记录
-        </button>
-        <button class="lm-plain-btn" type="button" @click="success('分享链接已生成', '无限暖暖项目概览')">
-          <SvgIcon icon="material-symbols:ios-share-rounded" />分享
-        </button>
-        <button class="lm-plain-btn" type="button" @click="openManagePage">
-          <SvgIcon icon="material-symbols:settings-outline-rounded" />设置
-        </button>
-        <button class="lm-icon-btn" type="button" aria-label="更多操作" @click="scrollList('activity', 'down')">
-          <SvgIcon icon="material-symbols:more-horiz-rounded" />
-        </button>
       </div>
     </header>
 
@@ -546,7 +553,7 @@ function scrollList(target: 'task' | 'activity' | 'gallery', direction: 'left' |
 <style scoped>
 .nikki-head {
   display: grid;
-  grid-template-columns: 244px minmax(0, 1fr) auto;
+  grid-template-columns: 244px minmax(0, 1fr);
   gap: 24px;
   align-items: center;
   padding: 0;
@@ -587,11 +594,6 @@ function scrollList(target: 'task' | 'activity' | 'gallery', direction: 'left' |
   margin-top: 7px;
   color: #171d2c;
   font-size: 12px;
-}
-
-.nikki-head .lm-actions {
-  align-self: start;
-  margin: 44px 15px 0 0;
 }
 
 .nikki-grid {

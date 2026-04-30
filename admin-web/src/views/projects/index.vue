@@ -561,46 +561,45 @@ function saveProject() {
 </script>
 
 <template>
-  <LifeAppShell active="项目">
+  <LifeAppShell
+    active="项目"
+    title="项目管理"
+    description="用项目聚合生活中的一切，让每件事井井有条"
+    :breadcrumbs="[{ label: '首页', routeKey: 'home' }, { label: '项目' }]"
+  >
     <LifeToastHost :items="toasts" @close="removeToast" />
 
-    <main class="pm-page">
-      <header class="pm-header">
-        <div>
-          <h1>项目管理</h1>
-          <p>用项目聚合生活中的一切，让每件事井井有条</p>
-        </div>
-        <div class="pm-header-actions">
-          <label class="pm-search">
-            <SvgIcon icon="material-symbols:search-rounded" />
-            <input v-model="searchKeyword" placeholder="搜索项目名称或内容" @keyup.enter="applySearch" />
-          </label>
-          <label class="pm-select pm-select-wrap">
-            <span>类型</span>
-            <select v-model="selectedType" @change="notifyTypeFilter">
-              <option v-for="item in typeOptions" :key="item">{{ item }}</option>
-            </select>
-          </label>
-          <label class="pm-select pm-select-wrap">
-            <span>状态</span>
-            <select v-model="selectedStatus" @change="notifyStatusFilter">
-              <option v-for="item in statusOptions" :key="item">{{ item }}</option>
-            </select>
-          </label>
-          <label class="pm-select pm-select-wrap">
-            <span>排序</span>
-            <select v-model="selectedSort" @change="notifySort">
-              <option v-for="item in sortOptions" :key="item">{{ item }}</option>
-            </select>
-          </label>
-          <button class="pm-primary" type="button" @click="openCreateModal"><SvgIcon icon="material-symbols:add-rounded" />新建项目</button>
-          <button class="pm-icon-button has-dot" aria-label="通知" type="button" @click="showUnavailable('项目通知')">
-            <SvgIcon icon="material-symbols:notifications-outline-rounded" />
-          </button>
-          <button class="pm-user" aria-label="用户头像" type="button" @click="showUnavailable('个人中心')"></button>
-        </div>
-      </header>
+    <template #actions>
+      <label class="pm-search">
+        <SvgIcon icon="material-symbols:search-rounded" />
+        <input v-model="searchKeyword" placeholder="搜索项目名称或内容" @keyup.enter="applySearch" />
+      </label>
+      <label class="pm-select pm-select-wrap">
+        <span>类型</span>
+        <select v-model="selectedType" @change="notifyTypeFilter">
+          <option v-for="item in typeOptions" :key="item">{{ item }}</option>
+        </select>
+      </label>
+      <label class="pm-select pm-select-wrap">
+        <span>状态</span>
+        <select v-model="selectedStatus" @change="notifyStatusFilter">
+          <option v-for="item in statusOptions" :key="item">{{ item }}</option>
+        </select>
+      </label>
+      <label class="pm-select pm-select-wrap">
+        <span>排序</span>
+        <select v-model="selectedSort" @change="notifySort">
+          <option v-for="item in sortOptions" :key="item">{{ item }}</option>
+        </select>
+      </label>
+      <button class="pm-primary" type="button" @click="openCreateModal"><SvgIcon icon="material-symbols:add-rounded" />新建项目</button>
+      <button class="pm-icon-button has-dot" aria-label="通知" type="button" @click="showUnavailable('项目通知')">
+        <SvgIcon icon="material-symbols:notifications-outline-rounded" />
+      </button>
+      <button class="pm-user" aria-label="用户头像" type="button" @click="showUnavailable('个人中心')"></button>
+    </template>
 
+    <main class="pm-page">
       <section class="pm-stats" aria-label="项目统计">
         <article v-for="item in statCards" :key="item.label" class="pm-stat-card">
           <span class="pm-stat-icon" :class="item.tone"><SvgIcon :icon="item.icon" /></span>
@@ -821,34 +820,6 @@ button {
     radial-gradient(circle at 47% 30%, #221e36 0 15%, transparent 16%),
     radial-gradient(circle at 50% 62%, #f5b2c3 0 19%, transparent 20%),
     linear-gradient(135deg, #c7b6ff, #ffd0df);
-}
-
-.pm-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.pm-header h1 {
-  margin: 0;
-  font-size: 26px;
-  line-height: 1.18;
-  font-weight: 800;
-  color: #0d111d;
-}
-
-.pm-header p {
-  margin: 9px 0 0;
-  color: #676d7f;
-  font-size: 14px;
-}
-
-.pm-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
 }
 
 .pm-search,
@@ -1659,15 +1630,6 @@ button {
 }
 
 @media (max-width: 1320px) {
-  .pm-header {
-    flex-direction: column;
-  }
-
-  .pm-header-actions {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
   .pm-content-grid {
     grid-template-columns: 1fr;
   }
