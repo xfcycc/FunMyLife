@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
+import { useRouterPush } from '@/hooks/common/router';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
 
 defineOptions({
@@ -50,6 +51,11 @@ interface DetailState {
 }
 
 const { toasts, removeToast, success, info, warning } = useLifeToast();
+const { routerPushByKey } = useRouterPush();
+
+function openManagePage() {
+  routerPushByKey('infinity-nikki-manage');
+}
 
 const tabs = [
   { label: '概览', icon: 'material-symbols:calendar-month-outline-rounded' },
@@ -258,7 +264,7 @@ function scrollList(target: 'task' | 'activity' | 'gallery', direction: 'left' |
         <button class="lm-plain-btn" type="button" @click="success('分享链接已生成', '无限暖暖项目概览')">
           <SvgIcon icon="material-symbols:ios-share-rounded" />分享
         </button>
-        <button class="lm-plain-btn" type="button" @click="info('项目设置', '这里可配置任务重置时间与提醒偏好')">
+        <button class="lm-plain-btn" type="button" @click="openManagePage">
           <SvgIcon icon="material-symbols:settings-outline-rounded" />设置
         </button>
         <button class="lm-icon-btn" type="button" aria-label="更多操作" @click="scrollList('activity', 'down')">
@@ -393,7 +399,7 @@ function scrollList(target: 'task' | 'activity' | 'gallery', direction: 'left' |
       <article class="lm-card account-card">
         <div class="lm-card-title">
           <h2>账号资产</h2>
-          <button type="button" @click="openDetail('asset', '账号资产', '展示当前项目绑定的账号与安全状态。', ['官方账号（主）：已保护', '小号-搭配测试：已保护', 'Nintendo Switch 账号：已保护'])">
+          <button type="button" @click="openManagePage">
             管理
           </button>
         </div>

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
+import { useRouterPush } from '@/hooks/common/router';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
 
 defineOptions({
@@ -17,6 +18,7 @@ interface TodoItem {
 }
 
 const { toasts, removeToast, success, info, warning } = useLifeToast();
+const { routerPushByKey } = useRouterPush();
 
 const summaryRange = ref<'today' | 'week'>('today');
 const weatherMode = ref<'today' | 'trip'>('today');
@@ -94,6 +96,26 @@ const currentWeatherLabel = computed(() =>
 const currentWeatherValue = computed(() =>
   weatherMode.value === 'today' ? '多云 18℃ - 25℃' : '晴 21℃ - 27℃'
 );
+
+const projectRouteKeyMap = {
+  无限暖暖: 'infinity-nikki',
+  '日本旅行 2026': 'japan-travel'
+} as const;
+
+function openProjects() {
+  routerPushByKey('projects');
+}
+
+function openProject(name: string) {
+  const routeKey = projectRouteKeyMap[name as keyof typeof projectRouteKeyMap];
+
+  if (routeKey) {
+    routerPushByKey(routeKey);
+    return;
+  }
+
+  info('项目详情待接入', name);
+}
 
 function toggleTodo(index: number) {
   const item = todos.value[index];
@@ -284,6 +306,7 @@ function addTimelineEvent() {
       <div class="lm-card-title project-strip-head">
         <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:folder-outline-rounded" /></span>项目总览</h2>
         <div class="project-filters">
+          <button type="button" @click="openProjects">全部项目</button>
           <button
             v-for="item in ['全部', '游戏', '旅行', '学习']"
             :key="item"
@@ -296,8 +319,16 @@ function addTimelineEvent() {
         </div>
       </div>
       <div class="home-projects">
-        <article v-for="item in filteredProjects" :key="item.name">
-          <button class="pin-btn" type="button" @click="toggleProjectPin(item.name)">
+        <article
+          v-for="item in filteredProjects"
+          :key="item.name"
+          role="button"
+          tabindex="0"
+          @click="openProject(item.name)"
+          @keydown.enter="openProject(item.name)"
+          @keydown.space.prevent="openProject(item.name)"
+        >
+          <button class="pin-btn" type="button" @click.stop="toggleProjectPin(item.name)">
             <SvgIcon :icon="item.pinned ? 'material-symbols:star-rounded' : 'material-symbols:star-outline-rounded'" />
           </button>
           <div class="home-project-cover" :class="item.cover"></div>

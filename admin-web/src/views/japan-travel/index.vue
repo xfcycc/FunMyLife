@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
+import { useRouterPush } from '@/hooks/common/router';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
 
 defineOptions({
@@ -53,6 +54,11 @@ interface DetailState {
 }
 
 const { toasts, removeToast, success, info, warning } = useLifeToast();
+const { routerPushByKey } = useRouterPush();
+
+function openManagePage() {
+  routerPushByKey('japan-travel-manage');
+}
 
 const tabs = [
   { label: '概览', icon: 'material-symbols:calendar-month-outline-rounded' },
@@ -228,7 +234,7 @@ function scrollList(target: 'route' | 'photo' | 'activity', direction: 'left' | 
         <button
           class="lm-plain-btn"
           type="button"
-          @click="openDetail('schedule', '编辑旅行项目', '这里可继续接入真实项目编辑表单。', ['目的地：东京 / 京都 / 大阪', '日期：2026.06.15 - 2026.06.26'])"
+          @click="openManagePage"
         >
           <SvgIcon icon="material-symbols:edit-outline-rounded" />编辑
         </button>

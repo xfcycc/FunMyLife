@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
+import { useRouterPush } from '@/hooks/common/router';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
 
 defineOptions({
@@ -56,6 +57,11 @@ interface ModalState {
 }
 
 const { toasts, removeToast, success, info, warning } = useLifeToast();
+const { routerPushByKey } = useRouterPush();
+
+function backToProject() {
+  routerPushByKey('japan-travel');
+}
 
 const tabs: TabLabel[] = ['基础信息', '行程规划', '同行人员', '清单模板', '资产资料', '图册同步', 'AI 设置'];
 const configSections: ConfigSection[] = ['日期配置', '行程模板', '预算分类', '证件资料'];
@@ -402,6 +408,7 @@ function scrollList(target: 'day' | 'doc' | 'notice', direction: 'left' | 'right
     <header class="manage-top lm-topbar">
       <div class="lm-title">
         <p>项目　/　日本旅行 2026　/　管理</p>
+        <button class="lm-plain-btn" type="button" @click="backToProject">← 返回项目详情</button>
         <h1>项目管理 <span>🌸</span></h1>
       </div>
       <div class="lm-actions">
@@ -612,7 +619,7 @@ function scrollList(target: 'day' | 'doc' | 'notice', direction: 'left' | 'right
     <footer class="lm-bottom-bar">
       <button class="lm-plain-btn" type="button" @click="resetConfig">重置配置</button>
       <span>{{ autoSave ? '✓ 自动保存已开启' : '自动保存已关闭' }}</span>
-      <button class="lm-plain-btn" type="button" @click="info('项目预览', '这里可跳回日本旅行项目概览')">预览项目概览</button>
+      <button class="lm-plain-btn" type="button" @click="backToProject">预览项目概览</button>
       <button class="lm-plain-btn" type="button" @click="success('配置已导出', '日本旅行 2026')">导出项目配置</button>
       <button class="lm-purple-btn" type="button" @click="saveConfig">保存配置</button>
     </footer>

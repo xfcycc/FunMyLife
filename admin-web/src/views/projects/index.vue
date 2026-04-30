@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
+import { useRouterPush } from '@/hooks/common/router';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
 
 defineOptions({
@@ -26,6 +27,7 @@ interface ProjectItem {
 }
 
 const { toasts, removeToast, success, info, warning } = useLifeToast();
+const { routerPushByKey } = useRouterPush();
 
 const navItems = [
   { label: '首页', icon: 'material-symbols:home-outline-rounded' },
@@ -375,6 +377,46 @@ function getProjectSource(name: string) {
   return projectItems.value.find(item => item.name === name) || extraProjects.value.find(item => item.name === name);
 }
 
+const projectRouteKeyMap = {
+  无限暖暖: 'infinity-nikki',
+  '日本旅行 2026': 'japan-travel'
+} as const;
+
+const projectManageRouteKeyMap = {
+  无限暖暖: 'infinity-nikki-manage',
+  '日本旅行 2026': 'japan-travel-manage'
+} as const;
+
+function getProjectRouteKey(name: string) {
+  return projectRouteKeyMap[name as keyof typeof projectRouteKeyMap];
+}
+
+function getProjectManageRouteKey(name: string) {
+  return projectManageRouteKeyMap[name as keyof typeof projectManageRouteKeyMap];
+}
+
+function openProject(item: ProjectItem) {
+  const routeKey = getProjectRouteKey(item.name);
+
+  if (routeKey) {
+    routerPushByKey(routeKey);
+    return;
+  }
+
+  info('项目详情待接入', item.name);
+}
+
+function openProjectManage(item: ProjectItem) {
+  const routeKey = getProjectManageRouteKey(item.name);
+
+  if (routeKey) {
+    routerPushByKey(routeKey);
+    return;
+  }
+
+  openEditModal(item);
+}
+
 function toggleFavorite(name: string) {
   const target = getProjectSource(name);
   if (!target) return;
@@ -645,9 +687,19 @@ function saveProject() {
           </div>
 
           <div ref="projectListRef" class="pm-card-grid" :class="{ 'is-list': viewMode === 'list' }">
-            <article v-for="item in visibleProjects" :key="item.name" class="pm-project-card" :class="{ archived: item.archived }">
+            <article
+              v-for="item in visibleProjects"
+              :key="item.name"
+              class="pm-project-card"
+              :class="{ archived: item.archived }"
+              role="button"
+              tabindex="0"
+              @click="openProject(item)"
+              @keydown.enter="openProject(item)"
+              @keydown.space.prevent="openProject(item)"
+            >
               <div class="pm-cover" :class="item.coverClass">
-                <button class="pm-card-action" aria-label="收藏" type="button" @click="toggleFavorite(item.name)">
+                <button class="pm-card-action" aria-label="收藏" type="button" @click.stop="toggleFavorite(item.name)">
                   <SvgIcon :icon="item.favorited ? 'material-symbols:star-rounded' : 'material-symbols:star-outline-rounded'" />
                 </button>
               </div>
@@ -687,8 +739,10 @@ function saveProject() {
                 <span class="pm-ai" :class="item.aiState"><i></i>AI 总结：{{ item.ai }}</span>
               </footer>
               <div class="pm-card-actions">
-                <button type="button" @click="openEditModal(item)">编辑</button>
-                <button type="button" :class="{ active: item.archived }" @click="toggleArchive(item.name)">
+                <button type="button" @click.stop="openProjectManage(item)">
+                  {{ getProjectManageRouteKey(item.name) ? '管理' : '编辑' }}
+                </button>
+                <button type="button" :class="{ active: item.archived }" @click.stop="toggleArchive(item.name)">
                   {{ item.archived ? '恢复项目' : '归档项目' }}
                 </button>
               </div>

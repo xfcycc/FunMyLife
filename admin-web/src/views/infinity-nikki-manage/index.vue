@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
+import { useRouterPush } from '@/hooks/common/router';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
 
 defineOptions({
@@ -56,6 +57,11 @@ interface ManageModalState {
 }
 
 const { toasts, removeToast, success, info, warning } = useLifeToast();
+const { routerPushByKey } = useRouterPush();
+
+function backToProject() {
+  routerPushByKey('infinity-nikki');
+}
 
 const tabs = [
   { label: '基础信息', icon: 'material-symbols:info-outline-rounded' },
@@ -387,7 +393,8 @@ function scrollList(target: 'rule' | 'template' | 'material', direction: 'up' | 
 
     <header class="nikki-manage-top lm-topbar">
       <div class="lm-title">
-        <h1>←　项目 / 无限暖暖 / 管理</h1>
+        <button class="lm-plain-btn" type="button" @click="backToProject">← 返回项目详情</button>
+        <h1>项目 / 无限暖暖 / 管理</h1>
       </div>
       <div class="lm-actions">
         <button class="lm-icon-btn" type="button" aria-label="搜索配置" @click="info('搜索配置', '可继续接入配置项搜索')">
@@ -655,6 +662,7 @@ function scrollList(target: 'rule' | 'template' | 'material', direction: 'up' | 
 
     <footer class="lm-bottom-bar">
       <button class="lm-plain-btn" type="button" @click="resetLocalConfig">重置</button>
+      <button class="lm-plain-btn" type="button" @click="backToProject">预览项目概览</button>
       <button class="lm-purple-btn" type="button" @click="saveConfig">保存配置</button>
     </footer>
 
