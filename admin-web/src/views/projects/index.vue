@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
+import LifeGeminiShell from '@/components/life-manager/LifeGeminiShell.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
 import { useRouterPush } from '@/hooks/common/router';
@@ -561,8 +561,7 @@ function saveProject() {
 </script>
 
 <template>
-  <LifeAppShell
-    active="项目"
+  <LifeGeminiShell
     title="项目管理"
     description="用项目聚合生活中的一切，让每件事井井有条"
     :breadcrumbs="[{ label: '首页', routeKey: 'home' }, { label: '项目' }]"
@@ -779,7 +778,7 @@ function saveProject() {
         </label>
       </div>
     </LifeModal>
-  </LifeAppShell>
+  </LifeGeminiShell>
 </template>
 
 <style scoped>
@@ -919,7 +918,7 @@ button {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-top: 37px;
   border: 1px solid #eceef5;
-  border-radius: 8px;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.86);
   box-shadow: 0 15px 36px rgba(56, 62, 95, 0.08);
 }
@@ -1136,7 +1135,7 @@ button {
   overflow: hidden;
   min-width: 0;
   border: 1px solid #ebeef5;
-  border-radius: 8px;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 13px 30px rgba(60, 67, 100, 0.1);
 }
@@ -1461,7 +1460,7 @@ button {
   min-height: 55px;
   padding: 10px 14px;
   border: 1px solid #e8ebf3;
-  border-radius: 8px;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.76);
   color: #6d7484;
   box-shadow: 0 9px 23px rgba(70, 75, 110, 0.04);
@@ -1509,7 +1508,7 @@ button {
 .pm-panel {
   padding: 18px 15px 16px;
   border: 1px solid #ebeef5;
-  border-radius: 8px;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 13px 30px rgba(60, 67, 100, 0.08);
 }
