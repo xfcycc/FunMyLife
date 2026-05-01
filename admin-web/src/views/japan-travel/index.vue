@@ -1,10 +1,39 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
+import { computed, ref, watch } from 'vue';
+import LifeGeminiShell from '@/components/life-manager/LifeGeminiShell.vue';
+import LifeGeminiProjectHero from '@/components/life-manager/LifeGeminiProjectHero.vue';
+import LifeGeminiTabs from '@/components/life-manager/LifeGeminiTabs.vue';
+import LifeGeminiCard from '@/components/life-manager/LifeGeminiCard.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
+import type { LifeGeminiProjectStat, LifeGeminiProjectTag } from '@/components/life-manager/types';
 import { useRouterPush } from '@/hooks/common/router';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
+import {
+  Calendar,
+  CheckCircle,
+  CheckSquare,
+  CheckSquare2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Circle,
+  CreditCard,
+  Image,
+  MapPin,
+  Minus,
+  MoreHorizontal,
+  Package,
+  Plane,
+  Plus,
+  BookOpen,
+  Sparkles,
+  Share2,
+  Sun,
+  Camera,
+  Building
+} from 'lucide-vue-next';
 
 defineOptions({
   name: 'JapanTravel'
@@ -15,11 +44,6 @@ type DateFilter = '全部' | '东京' | '京都' | '大阪';
 type ChecklistGroup = '行前' | '行李' | '预订' | '其他';
 type BudgetState = '正常' | '需关注' | '超预算';
 type DetailKind = 'schedule' | 'checklist' | 'budget' | 'asset' | 'note' | 'photo' | 'ai';
-
-interface TabItem {
-  label: TabLabel;
-  icon: string;
-}
 
 interface ScheduleItem {
   id: number;
@@ -42,7 +66,6 @@ interface AssetItem {
   title: string;
   desc: string;
   status: string;
-  icon: string;
 }
 
 interface DetailState {
@@ -60,15 +83,7 @@ function openManagePage() {
   routerPushByKey('japan-travel-manage');
 }
 
-const tabs = [
-  { label: '概览', icon: 'material-symbols:calendar-month-outline-rounded' },
-  { label: '行程', icon: 'material-symbols:business-center-outline-rounded' },
-  { label: '清单', icon: 'material-symbols:checklist-rounded' },
-  { label: '资产', icon: 'material-symbols:inventory-2-outline-rounded' },
-  { label: '记录', icon: 'material-symbols:edit-square-outline-rounded' },
-  { label: '图册', icon: 'material-symbols:photo-library-outline-rounded' },
-  { label: 'AI', icon: 'material-symbols:auto-awesome-rounded' }
-] satisfies TabItem[];
+const tabs = ['概览', '行程', '清单', '资产', '记录', '图册', 'AI'];
 
 const dateFilters = ['全部', '东京', '京都', '大阪'] as const;
 const checklistGroups = ['行前', '行李', '预订', '其他'] as const;
@@ -113,9 +128,9 @@ const checklist = ref<ChecklistItem[]>([
 ]);
 
 const assets = ref<AssetItem[]>([
-  { title: '去程机票', desc: '6月15日 CA929 上海 → 东京', status: '已出票', icon: 'material-symbols:flight-takeoff-rounded' },
-  { title: '东京酒店', desc: '6月15日 - 6月18日（3晚）', status: '已确认', icon: 'material-symbols:apartment-rounded' },
-  { title: 'JR Pass 预约', desc: '东京 → 京都 → 大阪', status: '待确认', icon: 'material-symbols:train-rounded' }
+  { title: '去程机票', desc: '6月15日 CA929 上海 → 东京', status: '已出票' },
+  { title: '东京酒店', desc: '6月15日 - 6月18日（3晚）', status: '已确认' },
+  { title: 'JR Pass 预约', desc: '东京 → 京都 → 大阪', status: '待确认' }
 ]);
 
 const detail = ref<DetailState>({
@@ -143,10 +158,42 @@ const remainingBudget = computed(() => totalBudget - budgetUsed.value);
 const checkedSpotCount = computed(() => schedule.value.filter(item => item.checked).length);
 const currentWeather = computed(() => weatherCities[weatherIndex.value]);
 
-function switchTab(label: TabLabel) {
-  activeTab.value = label;
-  info('旅行项目视图已切换', label);
-}
+const projectTags: LifeGeminiProjectTag[] = [
+  { label: '旅行' },
+  { label: '进行中', tone: 'success' }
+];
+
+const projectStats = computed<LifeGeminiProjectStat[]>(() => [
+  { label: '出发日期', value: '2026-06-15' },
+  { label: '目的地', value: '东京 · 京都 · 大阪' },
+  { label: '行程天数', value: '12 天' },
+  { label: '总预算', value: `¥${totalBudget.toLocaleString()}` },
+  { label: '清单进度', value: `${checklistProgress.value}%` }
+]);
+
+const detailIconComponent = computed(() => {
+  const map: Record<DetailKind, typeof MapPin> = {
+    schedule: MapPin,
+    checklist: CheckSquare,
+    budget: CreditCard,
+    photo: Image,
+    ai: Sparkles,
+    asset: Package,
+    note: BookOpen
+  };
+  return map[detail.value.kind];
+});
+
+const activityItems = [
+  { icon: Plane, title: '去程机票已出票', time: '5月25日 14:32', kind: 'asset' as DetailKind },
+  { icon: Building, title: '东京酒店预订成功', time: '5月24日 11:08', kind: 'asset' as DetailKind },
+  { icon: CheckSquare2, title: '行李清单更新', time: '5月24日 09:45', kind: 'checklist' as DetailKind },
+  { icon: Camera, title: '上传了 12 张照片', time: '5月23日 18:20', kind: 'photo' as DetailKind }
+];
+
+watch(activeTab, (newTab) => {
+  info('旅行项目视图已切换', newTab);
+});
 
 function switchDate(filter: DateFilter) {
   activeDate.value = filter;
@@ -222,242 +269,419 @@ function scrollList(target: 'route' | 'photo' | 'activity', direction: 'left' | 
 </script>
 
 <template>
-  <LifeAppShell
-    active="日本旅行 2026"
-    show-projects
+  <LifeGeminiShell
     title="日本旅行 2026"
-    description="东京 · 京都 · 大阪 · 奈良 · 富士山｜2026.06.15 - 2026.06.26（共 12 天）"
-    :breadcrumbs="[{ label: '首页', routeKey: 'home' }, { label: '项目', routeKey: 'projects' }, { label: '日本旅行 2026' }]"
+    description="东京 · 京都 · 大阪 · 奈良 · 富士山 | 2026.06.15 - 2026.06.26（共 12 天）"
+    :breadcrumbs="[
+      { label: '首页', routeKey: 'home' },
+      { label: '项目', routeKey: 'projects' },
+      { label: '日本旅行 2026' }
+    ]"
   >
     <LifeToastHost :items="toasts" @close="removeToast" />
 
-    <template #actions>
-      <button class="lm-plain-btn" type="button" @click="success('分享链接已生成', '日本旅行 2026')">
-        <SvgIcon icon="material-symbols:ios-share-rounded" />分享
-      </button>
-      <button class="lm-plain-btn" type="button" @click="openManagePage">
-        <SvgIcon icon="material-symbols:edit-outline-rounded" />编辑
-      </button>
-      <button class="lm-purple-btn" type="button" @click="openDetail('checklist', '新建旅行事项', '新增行程、清单、预算或笔记的演示入口。', [`当前清单：${checklistDoneCount}/${checklist.length}`])">
-        <SvgIcon icon="material-symbols:add-box-outline-rounded" />新建
-      </button>
-      <button class="lm-icon-btn" type="button" aria-label="查看提醒" @click="scrollList('route', 'down')">
-        <SvgIcon icon="material-symbols:notifications-outline-rounded" />
-      </button>
-      <button class="lm-icon-btn" type="button" aria-label="更多操作" @click="scrollList('activity', 'right')">
-        <SvgIcon icon="material-symbols:more-horiz-rounded" />
-      </button>
-    </template>
+    <LifeGeminiProjectHero
+      title="日本旅行 2026"
+      description="东京 · 京都 · 大阪 · 奈良 · 富士山"
+      cover-src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=800&h=400"
+      cover-alt="日本旅行 2026"
+      :tags="projectTags"
+      :stats="projectStats"
+    >
+      <template #title-icon>
+        <Plane class="text-indigo-500 w-5 h-5" />
+      </template>
 
-    <section class="travel-hero lm-hero-art japan">
-      <div class="hero-copy">
-        <h1>日本旅行 2026 <span>旅行</span></h1>
-        <p>东京 · 京都 · 大阪 · 奈良 · 富士山</p>
-        <p>2026.06.15 - 2026.06.26（共 12 天）</p>
-      </div>
-      <div class="countdown-box">
-        <span>出发倒计时</span>
-        <strong>48<em>天</em> 08<em>时</em> 32<em>分</em> 16<em>秒</em></strong>
-        <p>2026-06-15（周一）出发</p>
-      </div>
-      <div class="weather-box">
-        <span>{{ currentWeather.name }} {{ currentWeather.date }}</span>
-        <strong><SvgIcon icon="material-symbols:sunny-rounded" />{{ currentWeather.temp }}</strong>
-        <p>{{ currentWeather.weather }}</p>
-      </div>
-    </section>
+      <template #actions>
+        <div class="flex items-center space-x-2 px-4 py-2 bg-indigo-50 rounded-xl">
+          <Calendar :size="14" class="text-indigo-500" />
+          <span class="text-xs font-medium text-indigo-600">出发倒计时 48 天</span>
+        </div>
+        <div class="flex items-center space-x-2 px-4 py-2 bg-amber-50 rounded-xl">
+          <Sun :size="14" class="text-amber-500" />
+          <span class="text-xs font-medium text-amber-600">{{ currentWeather.name }} {{ currentWeather.current }}</span>
+        </div>
+      </template>
+    </LifeGeminiProjectHero>
 
-    <nav class="lm-tabs">
-      <button v-for="item in tabs" :key="item.label" :class="{ active: item.label === activeTab }" type="button" @click="switchTab(item.label)">
-        <SvgIcon :icon="item.icon" />{{ item.label }}
-      </button>
-    </nav>
+    <LifeGeminiTabs v-model="activeTab" :tabs="tabs" />
 
-    <section class="lm-grid travel-grid">
-      <article class="lm-card">
-        <div class="lm-card-title">
-          <h2>今日/近期行程</h2>
-          <div class="travel-scroll-actions compact">
-            <button type="button" aria-label="向上查看行程" @click="scrollList('route', 'up')">
-              <SvgIcon icon="material-symbols:keyboard-arrow-up-rounded" />
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <LifeGeminiCard title="今日/近期行程">
+        <template #action>
+          <div class="flex gap-1">
+            <button class="w-7 h-7 bg-slate-100 text-indigo-500 rounded-lg flex items-center justify-center" type="button" @click="scrollList('route', 'up')">
+              <ChevronUp :size="14" />
             </button>
-            <button type="button" aria-label="向下查看行程" @click="scrollList('route', 'down')">
-              <SvgIcon icon="material-symbols:keyboard-arrow-down-rounded" />
+            <button class="w-7 h-7 bg-slate-100 text-indigo-500 rounded-lg flex items-center justify-center" type="button" @click="scrollList('route', 'down')">
+              <ChevronDown :size="14" />
             </button>
           </div>
-        </div>
-        <div class="travel-segment">
-          <button v-for="item in dateFilters" :key="item" :class="{ active: item === activeDate }" type="button" @click="switchDate(item)">
+        </template>
+        <div class="grid grid-cols-4 gap-1 p-1 rounded-lg bg-slate-50 mb-3">
+          <button
+            v-for="item in dateFilters"
+            :key="item"
+            :class="['min-h-7 rounded-md text-xs border-0 cursor-pointer transition-colors', item === activeDate ? 'bg-white text-indigo-500 shadow-sm' : 'bg-transparent text-slate-500']"
+            type="button"
+            @click="switchDate(item)"
+          >
             {{ item }}
           </button>
         </div>
-        <div ref="routeListRef" class="route-list">
-          <div v-for="item in filteredSchedule" :key="item.id" :class="{ checked: item.checked }">
-            <time>{{ item.time }}</time>
-            <span></span>
+        <div ref="routeListRef" class="space-y-3 max-h-60 overflow-auto">
+          <div
+            v-for="item in filteredSchedule"
+            :key="item.id"
+            :class="['grid items-start gap-2', item.checked ? 'opacity-70' : '']"
+            style="grid-template-columns: 40px 8px minmax(0,1fr) auto 22px"
+          >
+            <time class="text-xs text-slate-400">{{ item.time }}</time>
+            <span class="w-2 h-2 mt-1 rounded-full bg-indigo-500 shadow-[0_0_0_4px_rgba(99,102,241,0.1)]"></span>
             <button
+              class="min-w-0 p-0 border-0 bg-transparent text-left cursor-pointer"
               type="button"
               @click="openDetail('schedule', item.title, '行程详情、交通方式、预约状态与备注演示。', [item.time, item.place, item.status])"
             >
-              <strong>{{ item.title }}</strong>
-              <p>{{ item.place }}</p>
+              <strong class="block text-xs font-medium text-slate-800">{{ item.title }}</strong>
+              <p class="text-xs text-slate-400 mt-1">{{ item.place }}</p>
             </button>
-            <em>{{ item.status }}</em>
-            <button class="check-btn" type="button" @click="toggleSchedule(item)">
-              <SvgIcon :icon="item.checked ? 'material-symbols:check-circle-rounded' : 'material-symbols:radio-button-unchecked-rounded'" />
+            <em class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 text-[10px] not-italic">{{ item.status }}</em>
+            <button class="w-5 h-5 flex items-center justify-center text-indigo-500" type="button" @click="toggleSchedule(item)">
+              <CheckCircle v-if="item.checked" :size="16" />
+              <Circle v-else :size="16" />
             </button>
           </div>
         </div>
-      </article>
+      </LifeGeminiCard>
 
-      <article class="lm-card checklist-progress">
-        <div class="lm-card-title">
-          <h2>行前清单进度</h2>
-          <button type="button" @click="openDetail('checklist', '行前清单', `当前分组 ${activeChecklist} 已完成 ${groupDoneText}。`, [`总进度：${checklistProgress}%`, `已完成：${checklistDoneCount}/${checklist.length}`])">
+      <LifeGeminiCard>
+        <template #title>
+          <span class="text-base font-bold text-slate-800">行前清单进度</span>
+        </template>
+        <template #action>
+          <button
+            class="appearance-none bg-transparent border-0 p-0 text-xs text-indigo-500 hover:text-indigo-600 font-medium"
+            type="button"
+            @click="openDetail('checklist', '行前清单', `当前分组 ${activeChecklist} 已完成 ${groupDoneText}。`, [`总进度：${checklistProgress}%`, `已完成：${checklistDoneCount}/${checklist.length}`])"
+          >
             查看清单
           </button>
-        </div>
-        <div class="ring" :style="{ '--checklist-progress': `${checklistProgress}%` }">
-          <strong>{{ checklistProgress }}%</strong><span>已完成</span>
-        </div>
-        <div class="progress-items">
-          <div class="travel-segment small">
-            <button v-for="item in checklistGroups" :key="item" :class="{ active: item === activeChecklist }" type="button" @click="switchChecklist(item)">
-              {{ item }}
+        </template>
+        <div class="flex items-center gap-6">
+          <div class="relative flex items-center justify-center shrink-0">
+            <svg class="transform -rotate-90 w-20 h-20">
+              <circle cx="40" cy="40" r="36" stroke="currentColor" stroke-width="6" fill="transparent" class="text-slate-100" />
+              <circle
+                cx="40"
+                cy="40"
+                r="36"
+                stroke="currentColor"
+                stroke-width="6"
+                fill="transparent"
+                :stroke-dasharray="2 * Math.PI * 36"
+                :stroke-dashoffset="2 * Math.PI * 36 - (checklistProgress / 100) * 2 * Math.PI * 36"
+                class="text-indigo-500 transition-all duration-1000 ease-in-out"
+                stroke-linecap="round"
+              />
+            </svg>
+            <div class="absolute flex flex-col items-center justify-center">
+              <span class="text-lg font-bold text-slate-800">{{ checklistProgress }}%</span>
+              <span class="text-[10px] text-slate-400">已完成</span>
+            </div>
+          </div>
+          <div class="flex-1 space-y-2">
+            <div class="grid grid-cols-4 gap-1 p-1 rounded-lg bg-slate-50 mb-2">
+              <button
+                v-for="item in checklistGroups"
+                :key="item"
+                :class="['min-h-6 rounded-md text-xs border-0 cursor-pointer', item === activeChecklist ? 'bg-white text-indigo-500 shadow-sm' : 'bg-transparent text-slate-500']"
+                type="button"
+                @click="switchChecklist(item)"
+              >
+                {{ item }}
+              </button>
+            </div>
+            <button
+              v-for="item in visibleChecklist"
+              :key="item.id"
+              type="button"
+              :class="['flex justify-between w-full p-0 border-0 bg-transparent text-left text-xs cursor-pointer', item.done ? 'text-emerald-500' : 'text-slate-600']"
+              @click="toggleChecklist(item)"
+            >
+              <span class="flex items-center">
+                <span :class="['w-2 h-2 rounded-full mr-2', item.done ? 'bg-emerald-400' : 'bg-slate-200']"></span>
+                {{ item.title }}
+              </span>
+              <span class="text-[10px]">{{ item.done ? '完成' : '待办' }}</span>
             </button>
           </div>
-          <button v-for="item in visibleChecklist" :key="item.id" type="button" :class="{ done: item.done }" @click="toggleChecklist(item)">
-            <i></i>{{ item.title }} <b>{{ item.done ? '完成' : '待办' }}</b>
-          </button>
         </div>
-      </article>
+      </LifeGeminiCard>
 
-      <article class="lm-card">
-        <div class="lm-card-title">
-          <h2>机票与酒店资产</h2>
-          <button type="button" @click="openDetail('asset', '机票与酒店资产', '集中查看机票、酒店、交通票券和保险资料。', [`资产数量：${assets.length}`, '全部资产 8 项'])">
-            查看全部
-          </button>
-        </div>
-        <div class="asset-list">
-          <div v-for="item in assets" :key="item.title">
-            <span class="lm-soft-icon"><SvgIcon :icon="item.icon" /></span>
-            <button type="button" @click="openDetail('asset', item.title, '资产详情、订单号、附件与提醒状态演示。', [item.desc, item.status])">
-              <strong>{{ item.title }}</strong>
-              <p>{{ item.desc }}</p>
+      <LifeGeminiCard title="机票与酒店资产" action-text="查看全部">
+        <div class="space-y-4">
+          <div v-for="item in assets" :key="item.title" class="grid items-center gap-3" style="grid-template-columns: 30px minmax(0,1fr) auto">
+            <div class="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+              <Package :size="14" />
+            </div>
+            <button
+              class="min-w-0 p-0 border-0 bg-transparent text-left cursor-pointer"
+              type="button"
+              @click="openDetail('asset', item.title, '资产详情、订单号、附件与提醒状态演示。', [item.desc, item.status])"
+            >
+              <strong class="block text-xs font-medium text-slate-800">{{ item.title }}</strong>
+              <p class="text-xs text-slate-400 mt-1">{{ item.desc }}</p>
             </button>
-            <em>{{ item.status }}</em>
+            <em class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 text-[10px] not-italic">{{ item.status }}</em>
           </div>
         </div>
-        <footer><button type="button" @click="info('资产列表', '这里可跳转到完整旅行资产资料')">全部资产 8 项 →</button></footer>
-      </article>
+        <div class="mt-4 pt-3 border-t border-slate-100">
+          <button
+            class="appearance-none bg-transparent border-0 p-0 text-xs text-indigo-500 hover:text-indigo-600 font-medium cursor-pointer"
+            type="button"
+            @click="info('资产列表', '这里可跳转到完整旅行资产资料')"
+          >
+            全部资产 8 项 →
+          </button>
+        </div>
+      </LifeGeminiCard>
 
-      <article class="lm-card budget-card">
-        <div class="lm-card-title">
-          <h2>预算概览</h2>
-          <button type="button" @click="cycleBudgetState">{{ budgetState }}</button>
+      <LifeGeminiCard title="预算概览">
+        <template #action>
+          <button
+            class="appearance-none bg-transparent border-0 p-0 text-xs text-indigo-500 hover:text-indigo-600 font-medium cursor-pointer"
+            type="button"
+            @click="cycleBudgetState"
+          >
+            {{ budgetState }}
+          </button>
+        </template>
+        <div class="block text-xl font-bold text-slate-800 mb-4">
+          ¥ {{ totalBudget.toLocaleString() }}.00
+          <span class="text-xs text-slate-400 font-normal ml-1">总预算</span>
         </div>
-        <strong>¥ {{ totalBudget.toLocaleString() }}.00 <span>总预算</span></strong>
-        <div class="budget-row"><span>已使用</span><b>¥ {{ budgetUsed.toLocaleString() }}.00</b><em>{{ budgetPercent }}%</em></div>
-        <div class="lm-progress-line"><i :style="{ width: `${budgetPercent}%` }"></i></div>
-        <div class="budget-row"><span>剩余</span><b>¥ {{ remainingBudget.toLocaleString() }}.00</b><em>{{ 100 - budgetPercent }}%</em></div>
-        <div class="budget-actions">
-          <button type="button" @click="adjustBudget(-500)"><SvgIcon icon="material-symbols:remove-rounded" /></button>
-          <button type="button" @click="adjustBudget(500)"><SvgIcon icon="material-symbols:add-rounded" /></button>
-          <button type="button" @click="openDetail('budget', '预算明细', '预算支出、剩余额度与状态演示。', [`状态：${budgetState}`, `已使用：${budgetPercent}%`])">明细</button>
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs text-slate-500">已使用</span>
+          <span class="text-xs font-medium text-slate-700">¥ {{ budgetUsed.toLocaleString() }}.00</span>
+          <span class="text-[10px] text-slate-400">{{ budgetPercent }}%</span>
         </div>
-      </article>
+        <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+          <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: `${budgetPercent}%` }"></div>
+        </div>
+        <div class="flex justify-between items-center mb-4">
+          <span class="text-xs text-slate-500">剩余</span>
+          <span class="text-xs font-medium text-slate-700">¥ {{ remainingBudget.toLocaleString() }}.00</span>
+          <span class="text-[10px] text-slate-400">{{ 100 - budgetPercent }}%</span>
+        </div>
+        <div class="flex gap-2">
+          <button
+            class="w-8 h-7 bg-slate-100 text-indigo-500 rounded-lg flex items-center justify-center border-0 cursor-pointer"
+            type="button"
+            @click="adjustBudget(-500)"
+          >
+            <Minus :size="14" />
+          </button>
+          <button
+            class="w-8 h-7 bg-slate-100 text-indigo-500 rounded-lg flex items-center justify-center border-0 cursor-pointer"
+            type="button"
+            @click="adjustBudget(500)"
+          >
+            <Plus :size="14" />
+          </button>
+          <button
+            class="flex-1 h-7 bg-slate-100 text-indigo-500 rounded-lg flex items-center justify-center border-0 cursor-pointer text-xs"
+            type="button"
+            @click="openDetail('budget', '预算明细', '预算支出、剩余额度与状态演示。', [`状态：${budgetState}`, `已使用：${budgetPercent}%`])"
+          >
+            明细
+          </button>
+        </div>
+      </LifeGeminiCard>
 
-      <article class="lm-card weather-card">
-        <div class="lm-card-title">
-          <h2>天气与地点</h2>
-          <button type="button" @click="switchWeather()">切换城市</button>
-        </div>
-        <div class="city-tabs">
-          <button v-for="(item, index) in weatherCities" :key="item.name" :class="{ active: index === weatherIndex }" type="button" @click="switchWeather(index)">
+      <LifeGeminiCard title="天气与地点">
+        <template #action>
+          <button
+            class="appearance-none bg-transparent border-0 p-0 text-xs text-indigo-500 hover:text-indigo-600 font-medium cursor-pointer"
+            type="button"
+            @click="switchWeather()"
+          >
+            切换城市
+          </button>
+        </template>
+        <div class="flex gap-1 p-1 rounded-lg bg-slate-50 mb-4">
+          <button
+            v-for="(item, index) in weatherCities"
+            :key="item.name"
+            :class="['flex-1 min-h-7 rounded-md text-xs border-0 cursor-pointer transition-colors', index === weatherIndex ? 'bg-white text-indigo-500 shadow-sm' : 'bg-transparent text-slate-500']"
+            type="button"
+            @click="switchWeather(index)"
+          >
             {{ item.name }}
           </button>
         </div>
-        <div class="big-weather"><SvgIcon icon="material-symbols:partly-cloudy-day-rounded" /><strong>{{ currentWeather.current }}</strong><span>{{ currentWeather.weather }}</span></div>
-        <div class="forecast"><span>5/30<br />23°/19°</span><span>5/31<br />24°/18°</span><span>6/1<br />25°/19°</span></div>
-      </article>
-
-      <article class="lm-card album-card">
-        <div class="lm-card-title">
-          <h2>图册预览</h2>
-          <button type="button" @click="scrollList('photo', 'right')">滑动</button>
+        <div class="flex items-center justify-center gap-3 mb-4">
+          <Sun :size="28" class="text-amber-400" />
+          <span class="text-2xl font-bold text-slate-800">{{ currentWeather.current }}</span>
+          <span class="text-sm text-slate-500">{{ currentWeather.weather }}</span>
         </div>
-        <div ref="photoListRef" class="photo-row">
+        <div class="flex justify-around text-center">
+          <div class="text-xs text-slate-400">
+            <div>5/30</div>
+            <div>23°/19°</div>
+          </div>
+          <div class="text-xs text-slate-400">
+            <div>5/31</div>
+            <div>24°/18°</div>
+          </div>
+          <div class="text-xs text-slate-400">
+            <div>6/1</div>
+            <div>25°/19°</div>
+          </div>
+        </div>
+      </LifeGeminiCard>
+
+      <LifeGeminiCard title="图册预览">
+        <template #action>
+          <button
+            class="appearance-none bg-transparent border-0 p-0 text-xs text-indigo-500 hover:text-indigo-600 font-medium cursor-pointer"
+            type="button"
+            @click="scrollList('photo', 'right')"
+          >
+            滑动
+          </button>
+        </template>
+        <div ref="photoListRef" class="flex gap-2 overflow-x-auto pb-1">
           <button
             v-for="index in 6"
             :key="index"
             type="button"
             :aria-label="`查看旅行图册 ${index}`"
+            class="w-20 h-20 rounded-lg bg-gradient-to-br cursor-pointer shrink-0 border-0"
+            :class="[
+              index === 1 ? 'from-blue-200 to-pink-200' :
+              index === 2 ? 'from-blue-300 to-amber-700' :
+              index === 3 ? 'from-red-200 to-amber-200' :
+              index === 4 ? 'from-green-300 to-amber-200' :
+              index === 5 ? 'from-purple-200 to-pink-200' :
+              'from-indigo-200 to-blue-200'
+            ]"
             @click="openDetail('photo', `旅行图册 ${index}`, '图册详情、拍摄城市和关联笔记演示。', [`照片序号：${index}`, '相册：日本旅行 2026'])"
           ></button>
         </div>
-        <p>共 128 张照片，12 个视频</p>
-      </article>
+        <p class="text-xs text-slate-400 mt-3">共 128 张照片，12 个视频</p>
+      </LifeGeminiCard>
 
-      <article class="lm-card notes-card">
-        <div class="lm-card-title">
-          <h2>旅行笔记 / 攻略</h2>
-          <button type="button" @click="openDetail('note', '旅行笔记 / 攻略', '整理景点、交通、美食和购物攻略。', ['当前展示 3 条', '共 18 条笔记'])">查看全部</button>
-        </div>
-        <button type="button" @click="openDetail('note', '东京必去景点清单', '东京景点、预约、交通和排队时间整理。', ['5月20日', '标签：东京'])">
-          东京必去景点清单 <time>5月20日</time>
-        </button>
-        <button type="button" @click="openDetail('note', '京都交通与景点攻略', '京都巴士、地铁和景点路线规划。', ['5月18日', '标签：京都'])">
-          京都交通与景点攻略 <time>5月18日</time>
-        </button>
-        <button type="button" @click="openDetail('note', '日本旅行必备 APP 推荐', '地图、翻译、交通和支付类 App 清单。', ['5月15日', '标签：工具'])">
-          日本旅行必备 APP 推荐 <time>5月15日</time>
-        </button>
-        <button class="add-note" type="button" @click="success('已创建笔记草稿', '日本旅行新笔记')">＋ 新建笔记</button>
-      </article>
-
-      <article class="lm-card ai-travel">
-        <div class="lm-card-title">
-          <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:auto-awesome-rounded" /></span>AI 行前建议</h2>
-          <button type="button" @click="info('AI 建议已重新生成', '已结合行程、清单与预算状态')">重新生成</button>
-        </div>
-        <ul>
-          <li>东京 6 月中旬天气舒适，建议携带薄外套和雨具。</li>
-          <li>新宿周边晚间人流较大，注意随身物品安全。</li>
-          <li>你有 {{ schedule.length - checkedSpotCount }} 个景点尚未打卡，别忘记安排时间。</li>
-          <li>建议在京都安排 1 天体验传统抹茶和和服拍照。</li>
-        </ul>
-        <button type="button" @click="openDetail('ai', 'AI 行前建议', '根据行程、清单、预算和天气生成的行前建议。', [`清单进度：${checklistProgress}%`, `预算状态：${budgetState}`])">
-          查看全部建议 ›
-        </button>
-        <div class="lm-robot"></div>
-      </article>
-    </section>
-
-    <section class="lm-card travel-activity">
-      <div class="lm-card-title">
-        <h2>最近动态</h2>
-        <div class="travel-scroll-actions compact">
-          <button type="button" aria-label="向左滑动动态" @click="scrollList('activity', 'left')">
-            <SvgIcon icon="material-symbols:keyboard-arrow-left-rounded" />
+      <LifeGeminiCard title="旅行笔记 / 攻略" action-text="查看全部">
+        <div class="space-y-3">
+          <button
+            v-for="(note, index) in [
+              { text: '东京必去景点清单', time: '5月20日', tag: '东京' },
+              { text: '京都交通与景点攻略', time: '5月18日', tag: '京都' },
+              { text: '日本旅行必备 APP 推荐', time: '5月15日', tag: '工具' }
+            ]"
+            :key="index"
+            type="button"
+            class="flex items-start justify-between w-full p-0 border-0 bg-transparent text-left cursor-pointer group"
+            @click="openDetail('note', note.text, '旅行笔记详情。', [note.time, `标签：${note.tag}`])"
+          >
+            <div class="flex items-start space-x-2 pr-4">
+              <BookOpen :size="14" class="text-slate-300 group-hover:text-indigo-400 transition-colors mt-0.5" />
+              <div>
+                <p class="text-xs font-medium text-slate-700 group-hover:text-indigo-600 transition-colors">{{ note.text }}</p>
+                <span class="inline-block mt-1 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] rounded">{{ note.tag }}</span>
+              </div>
+            </div>
+            <span class="text-[10px] text-slate-400 whitespace-nowrap pt-0.5">{{ note.time }}</span>
           </button>
-          <button type="button" aria-label="向右滑动动态" @click="scrollList('activity', 'right')">
-            <SvgIcon icon="material-symbols:keyboard-arrow-right-rounded" />
+        </div>
+        <button
+          class="mt-3 appearance-none bg-transparent border-0 p-0 text-xs text-indigo-500 hover:text-indigo-600 font-medium cursor-pointer"
+          type="button"
+          @click="success('已创建笔记草稿', '日本旅行新笔记')"
+        >
+          ＋ 新建笔记
+        </button>
+      </LifeGeminiCard>
+
+      <LifeGeminiCard class="bg-gradient-to-br from-indigo-50/50 to-purple-50/50">
+        <template #title>
+          <span class="flex items-center">
+            <Sparkles :size="16" class="text-indigo-500 mr-1.5" />
+            AI 行前建议
+          </span>
+        </template>
+        <template #action>
+          <button
+            class="appearance-none bg-transparent border-0 p-0 text-xs text-indigo-500 hover:text-indigo-600 font-medium cursor-pointer"
+            type="button"
+            @click="info('AI 建议已重新生成', '已结合行程、清单与预算状态')"
+          >
+            重新生成
+          </button>
+        </template>
+        <ul class="space-y-2 text-xs text-slate-600 m-0 pl-4">
+          <li class="flex items-start">
+            <span class="text-indigo-500 mr-1.5 mt-0.5">•</span>
+            <span>东京 6 月中旬天气舒适，建议携带薄外套和雨具。</span>
+          </li>
+          <li class="flex items-start">
+            <span class="text-indigo-500 mr-1.5 mt-0.5">•</span>
+            <span>新宿周边晚间人流较大，注意随身物品安全。</span>
+          </li>
+          <li class="flex items-start">
+            <span class="text-indigo-500 mr-1.5 mt-0.5">•</span>
+            <span>你有 <strong class="text-rose-500">{{ schedule.length - checkedSpotCount }} 个景点尚未打卡</strong>，别忘记安排时间。</span>
+          </li>
+          <li class="flex items-start">
+            <span class="text-indigo-500 mr-1.5 mt-0.5">•</span>
+            <span>建议在京都安排 1 天体验传统抹茶和和服拍照。</span>
+          </li>
+        </ul>
+        <button
+          class="mt-3 appearance-none bg-transparent border-0 p-0 text-xs font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer flex items-center"
+          type="button"
+          @click="openDetail('ai', 'AI 行前建议', '根据行程、清单、预算和天气生成的行前建议。', [`清单进度：${checklistProgress}%`, `预算状态：${budgetState}`])"
+        >
+          查看全部建议
+          <ChevronRight :size="12" class="ml-0.5" />
+        </button>
+      </LifeGeminiCard>
+    </div>
+
+    <section class="mt-6 bg-white rounded-[2rem] p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="font-bold text-slate-800 text-base">最近动态</h3>
+        <div class="flex gap-1">
+          <button
+            class="w-7 h-7 bg-slate-100 text-indigo-500 rounded-lg flex items-center justify-center border-0 cursor-pointer"
+            type="button"
+            @click="scrollList('activity', 'left')"
+          >
+            <ChevronLeft :size="14" />
+          </button>
+          <button
+            class="w-7 h-7 bg-slate-100 text-indigo-500 rounded-lg flex items-center justify-center border-0 cursor-pointer"
+            type="button"
+            @click="scrollList('activity', 'right')"
+          >
+            <ChevronRight :size="14" />
           </button>
         </div>
       </div>
-      <div ref="activityListRef">
-        <button type="button" @click="openDetail('asset', '去程机票已出票', '机票资产状态更新。', ['5月25日 14:32', 'CA929 上海 → 东京'])">
-          <SvgIcon icon="material-symbols:flight-takeoff-rounded" /> 去程机票已出票 <span>5月25日 14:32</span>
-        </button>
-        <button type="button" @click="openDetail('asset', '东京酒店预订成功', '酒店资产状态更新。', ['5月24日 11:08', '东京 3 晚'])">
-          <SvgIcon icon="material-symbols:apartment-rounded" /> 东京酒店预订成功 <span>5月24日 11:08</span>
-        </button>
-        <button type="button" @click="openDetail('checklist', '行李清单更新', '行李分组新增或完成清单项。', ['5月24日 09:45', `清单进度：${checklistProgress}%`])">
-          <SvgIcon icon="material-symbols:check-box-rounded" /> 行李清单更新 <span>5月24日 09:45</span>
-        </button>
-        <button type="button" @click="openDetail('photo', '上传了 12 张照片', '图册新增旅行素材。', ['5月23日 18:20', '图册'])">
-          <SvgIcon icon="material-symbols:add-photo-alternate-outline-rounded" /> 上传了 12 张照片 <span>5月23日 18:20</span>
+      <div ref="activityListRef" class="flex gap-4 overflow-x-auto pb-1">
+        <button
+          v-for="(act, index) in activityItems"
+          :key="index"
+          type="button"
+          class="flex flex-col items-center bg-white p-3 group cursor-pointer border-0 shrink-0 hover:scale-105 transition-transform"
+          @click="openDetail(act.kind, act.title, '动态详情。', [act.time])"
+        >
+          <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-2 shadow-sm border border-white ring-4 ring-white bg-indigo-50">
+            <component :is="act.icon" :size="20" class="text-indigo-500" />
+          </div>
+          <p class="text-xs font-bold text-slate-700 text-center whitespace-nowrap">{{ act.title }}</p>
+          <p class="text-[10px] text-slate-400 text-center mt-0.5 whitespace-nowrap">{{ act.time }}</p>
         </button>
       </div>
     </section>
@@ -471,600 +695,20 @@ function scrollList(target: 'route' | 'photo' | 'activity', direction: 'left' | 
       :width="460"
       @confirm="confirmDetail"
     >
-      <div class="travel-detail-modal" :class="`kind-${detail.kind}`">
-        <span class="detail-kind">
-          <SvgIcon
-            :icon="
-              detail.kind === 'schedule'
-                ? 'material-symbols:map-outline-rounded'
-                : detail.kind === 'checklist'
-                  ? 'material-symbols:checklist-rounded'
-                  : detail.kind === 'budget'
-                    ? 'material-symbols:payments-outline-rounded'
-                    : detail.kind === 'photo'
-                      ? 'material-symbols:photo-library-outline-rounded'
-                      : detail.kind === 'ai'
-                        ? 'material-symbols:auto-awesome-rounded'
-                        : detail.kind === 'asset'
-                          ? 'material-symbols:inventory-2-outline-rounded'
-                          : 'material-symbols:edit-note-outline-rounded'
-            "
-          />
+      <div class="grid grid-cols-[48px_minmax(0,1fr)] gap-4 items-start">
+        <span class="inline-grid w-12 h-12 place-items-center rounded-xl bg-indigo-50 text-indigo-500">
+          <component :is="detailIconComponent" :size="24" />
         </span>
-        <ul>
-          <li v-for="item in detail.meta" :key="item">{{ item }}</li>
+        <ul class="grid gap-2 m-0 p-0 list-none">
+          <li
+            v-for="item in detail.meta"
+            :key="item"
+            class="p-3 rounded-lg bg-slate-50 text-slate-600 text-xs"
+          >
+            {{ item }}
+          </li>
         </ul>
       </div>
     </LifeModal>
-  </LifeAppShell>
+  </LifeGeminiShell>
 </template>
-
-<style scoped>
-.travel-hero {
-  height: 181px;
-  border-radius: 8px;
-  color: #fff;
-  box-shadow: 0 16px 34px rgba(52, 79, 116, 0.2);
-}
-
-.travel-hero::before {
-  inset: 18% 45% 28% 18%;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  padding: 24px;
-  text-shadow: 0 2px 12px rgba(28, 43, 64, 0.22);
-}
-
-.hero-copy h1 {
-  margin: 0 0 8px;
-  font-size: 29px;
-}
-
-.hero-copy h1 span {
-  padding: 2px 7px;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.75);
-  color: #725ae8;
-  font-size: 11px;
-}
-
-.hero-copy p {
-  margin: 6px 0;
-  font-size: 12px;
-}
-
-.countdown-box,
-.weather-box {
-  position: absolute;
-  z-index: 2;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #131827;
-  box-shadow: 0 12px 26px rgba(37, 47, 78, 0.16);
-}
-
-.countdown-box {
-  left: 19px;
-  bottom: 13px;
-  width: 190px;
-  padding: 13px 16px;
-}
-
-.countdown-box span,
-.weather-box span,
-.countdown-box p,
-.weather-box p {
-  color: #7a8293;
-  font-size: 10px;
-}
-
-.countdown-box strong {
-  display: block;
-  margin: 8px 0;
-  font-size: 19px;
-}
-
-.countdown-box em {
-  margin: 0 5px 0 2px;
-  color: #626a7c;
-  font-size: 10px;
-  font-style: normal;
-}
-
-.countdown-box p,
-.weather-box p {
-  margin: 0;
-}
-
-.weather-box {
-  right: 17px;
-  bottom: 12px;
-  width: 128px;
-  padding: 13px;
-}
-
-.weather-box strong {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0 5px;
-}
-
-.weather-box .svg-icon {
-  color: #f5bb43;
-  font-size: 25px;
-}
-
-.travel-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 14px;
-}
-
-.travel-segment {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
-  margin-bottom: 13px;
-  padding: 4px;
-  border-radius: 8px;
-  background: #f6f7fc;
-}
-
-.travel-segment.small {
-  margin-bottom: 10px;
-}
-
-.travel-segment button,
-.travel-scroll-actions button,
-.budget-actions button {
-  border: 0;
-  cursor: pointer;
-}
-
-.travel-segment button {
-  min-height: 28px;
-  border-radius: 7px;
-  background: transparent;
-  color: #7d8495;
-  font-size: 10px;
-}
-
-.travel-segment button.active {
-  background: #fff;
-  color: #765ce8;
-  box-shadow: 0 8px 18px rgba(93, 78, 180, 0.08);
-}
-
-.travel-scroll-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.travel-scroll-actions.compact {
-  margin: 0;
-}
-
-.travel-scroll-actions button {
-  display: inline-grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border-radius: 7px;
-  background: #f6f7fc;
-  color: #765ce8;
-}
-
-.route-list {
-  display: grid;
-  gap: 13px;
-  max-height: 238px;
-  overflow: auto;
-  padding-right: 2px;
-}
-
-.route-list div {
-  display: grid;
-  grid-template-columns: 40px 10px minmax(0, 1fr) auto 24px;
-  gap: 9px;
-  align-items: start;
-}
-
-.route-list div.checked {
-  opacity: 0.72;
-}
-
-.route-list time,
-.route-list p,
-.asset-list p,
-.travel-activity span {
-  color: #8b91a1;
-  font-size: 10px;
-}
-
-.route-list span {
-  width: 8px;
-  height: 8px;
-  margin-top: 4px;
-  border-radius: 50%;
-  background: #775fe8;
-  box-shadow: 0 0 0 4px #f0ecff;
-}
-
-.route-list strong,
-.asset-list strong {
-  display: block;
-  color: #202636;
-  font-size: 12px;
-}
-
-.route-list button,
-.asset-list button {
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-}
-
-.route-list p,
-.asset-list p {
-  margin: 4px 0 0;
-}
-
-.route-list em,
-.asset-list em {
-  padding: 2px 7px;
-  border-radius: 5px;
-  background: #eaf9f2;
-  color: #31a978;
-  font-size: 9px;
-  font-style: normal;
-}
-
-.route-list .check-btn {
-  display: inline-grid;
-  width: 22px;
-  height: 22px;
-  place-items: center;
-  color: #765ce8;
-  font-size: 18px;
-}
-
-.checklist-progress {
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  align-items: center;
-}
-
-.checklist-progress .lm-card-title {
-  grid-column: 1 / -1;
-}
-
-.ring {
-  width: 88px;
-  height: 88px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: conic-gradient(#765ce8 0 var(--checklist-progress, 0%), #eef0f7 var(--checklist-progress, 0%));
-  color: #171d2c;
-  font-size: 20px;
-  position: relative;
-}
-
-.ring::after {
-  content: '';
-  position: absolute;
-  inset: 12px;
-  border-radius: 50%;
-  background: #fff;
-}
-
-.ring {
-  isolation: isolate;
-}
-
-.ring span {
-  display: block;
-  color: #8b91a1;
-  font-size: 10px;
-}
-
-.ring > * {
-  z-index: 1;
-}
-
-.progress-items button,
-.notes-card > button:not(.add-note) {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  margin: 9px 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #596174;
-  font-size: 11px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.progress-items button.done {
-  color: #31a978;
-}
-
-.progress-items i {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 8px;
-  border-radius: 50%;
-  background: #58c99c;
-}
-
-.progress-items button:not(.done) i {
-  background: #d7dce8;
-}
-
-.asset-list {
-  display: grid;
-  gap: 14px;
-}
-
-.asset-list div {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-}
-
-.asset-list footer {
-  margin-top: 11px;
-}
-
-.asset-list footer button {
-  border: 0;
-  background: transparent;
-  color: #765ce8;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.budget-card > strong {
-  display: block;
-  margin: 7px 0 18px;
-  color: #101624;
-  font-size: 22px;
-}
-
-.budget-card > strong span {
-  color: #8b91a1;
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.budget-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  margin: 11px 0 6px;
-  color: #71788a;
-  font-size: 11px;
-}
-
-.budget-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.budget-actions button {
-  display: inline-grid;
-  min-width: 30px;
-  height: 28px;
-  place-items: center;
-  padding: 0 10px;
-  border-radius: 7px;
-  background: #f6f7fc;
-  color: #765ce8;
-  font-size: 10px;
-}
-
-.city-tabs {
-  display: flex;
-  justify-content: space-around;
-  gap: 6px;
-}
-
-.city-tabs button {
-  flex: 1;
-  min-height: 26px;
-  border: 0;
-  border-radius: 7px;
-  background: #f6f7fc;
-  color: #765ce8;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.city-tabs button.active {
-  background: #f2edff;
-}
-
-.big-weather {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  margin: 18px 0;
-}
-
-.big-weather .svg-icon {
-  color: #f3bf49;
-  font-size: 28px;
-}
-
-.big-weather strong {
-  font-size: 24px;
-}
-
-.forecast {
-  display: flex;
-  justify-content: space-around;
-  color: #7b8294;
-  font-size: 10px;
-  text-align: center;
-}
-
-.photo-row {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 84px;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-}
-
-.photo-row button {
-  height: 79px;
-  border: 0;
-  border-radius: 7px;
-  background: linear-gradient(135deg, #b9d9f1, #ffd8dc);
-  cursor: pointer;
-}
-
-.photo-row button:nth-child(2) {
-  background: linear-gradient(135deg, #9ad0f4, #805c43);
-}
-
-.photo-row button:nth-child(3) {
-  background: linear-gradient(135deg, #f6a6a3, #f4d9aa);
-}
-
-.photo-row button:nth-child(4) {
-  background: linear-gradient(135deg, #8bbd89, #ebd3b4);
-}
-
-.album-card p {
-  margin: 11px 0 0;
-  color: #7b8294;
-  font-size: 10px;
-}
-
-.notes-card time {
-  color: #8b91a1;
-}
-
-.add-note {
-  margin-top: 7px;
-  border: 0;
-  background: transparent;
-  color: #765ce8;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.ai-travel {
-  position: relative;
-}
-
-.ai-travel ul {
-  margin: 0;
-  padding-left: 16px;
-  color: #596174;
-  font-size: 10px;
-  line-height: 2;
-}
-
-.ai-travel .lm-robot {
-  position: absolute;
-  right: 12px;
-  bottom: -7px;
-  transform: scale(0.72);
-}
-
-.ai-travel > button,
-.ai-travel .lm-card-title button {
-  border: 0;
-  background: transparent;
-  color: #765ce8;
-  cursor: pointer;
-}
-
-.travel-activity {
-  margin-top: 14px;
-}
-
-.travel-activity > div:last-child {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(190px, 1fr);
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-}
-
-.travel-activity button {
-  display: grid;
-  grid-template-columns: 25px minmax(0, 1fr);
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #495164;
-  font-size: 11px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.travel-activity .svg-icon {
-  color: #765ce8;
-  font-size: 22px;
-}
-
-.travel-detail-modal {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-
-.detail-kind {
-  display: inline-grid;
-  width: 48px;
-  height: 48px;
-  place-items: center;
-  border-radius: 8px;
-  background: #f2edff;
-  color: #765ce8;
-  font-size: 24px;
-}
-
-.travel-detail-modal ul {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.travel-detail-modal li {
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #f8f8fd;
-  color: #596174;
-  font-size: 12px;
-}
-
-@media (max-width: 1180px) {
-  .travel-grid,
-  .travel-activity > div:last-child {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-</style>
