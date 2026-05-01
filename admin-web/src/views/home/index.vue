@@ -1,120 +1,195 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import LifeAppShell from '@/components/life-manager/LifeAppShell.vue';
+import type { RouteKey } from '@elegant-router/types';
+import LifeGeminiShell from '@/components/life-manager/LifeGeminiShell.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
-import { useRouterPush } from '@/hooks/common/router';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
+import { useRouterPush } from '@/hooks/common/router';
 
 defineOptions({
   name: 'Home'
 });
 
+type TodoTag = '工作' | '生活' | '学习' | '旅行';
+type ProjectTag = '游戏' | '旅行' | '学习';
+type Tone = 'primary' | 'blue' | 'cyan' | 'green' | 'orange' | 'pink' | 'purple' | 'red' | 'slate';
+
 interface TodoItem {
   title: string;
-  tag: string;
+  tag: TodoTag;
   time: string;
   done: boolean;
+}
+
+interface ExpiringItem {
+  title: string;
+  date: string;
+  days: number;
+  icon: string;
+  tone: Tone;
+  tag?: string;
+  urgent?: boolean;
+}
+
+interface ProjectItem {
+  title: string;
+  tag: ProjectTag;
+  image: string;
+  stats: { label: string; value: string }[];
+  bottomLeft: string;
+  daysLeft: number;
+  urgent?: boolean;
+  routeKey?: RouteKey;
+}
+
+interface StatItem {
+  label: string;
+  percent: number;
+  tone: Tone;
+}
+
+interface ShortcutItem {
+  label: string;
+  icon: string;
+  tone: Tone;
+}
+
+interface EventItem {
+  prefix: string;
+  content: string;
+  time: string;
+  tone: Tone;
 }
 
 const { toasts, removeToast, success, info, warning } = useLifeToast();
 const { routerPushByKey } = useRouterPush();
 
-const summaryRange = ref<'today' | 'week'>('today');
 const weatherMode = ref<'today' | 'trip'>('today');
-const projectFilter = ref<'全部' | '游戏' | '旅行' | '学习'>('全部');
-const aiIndex = ref(0);
 const showTodoModal = ref(false);
 const showEventModal = ref(false);
 const newTodoTitle = ref('');
-const newTodoTag = ref('生活');
+const newTodoTag = ref<TodoTag>('生活');
 const newTodoTime = ref('21:30');
 const realtimeCardRef = ref<HTMLElement | null>(null);
 const statusListRef = ref<HTMLElement | null>(null);
 
 const todos = ref<TodoItem[]>([
-  { title: '完成项目文档初稿', tag: '工作', time: '10:00', done: true },
+  { title: '完成项目文档初稿', tag: '工作', time: '10:00', done: false },
   { title: '健身 30 分钟', tag: '生活', time: '18:30', done: false },
   { title: '阅读《深度工作》第 3 章', tag: '学习', time: '20:00', done: false },
   { title: '整理一周开销', tag: '生活', time: '21:00', done: false }
 ]);
 
-const expiring = [
-  ['腾讯视频 VIP', '6月2日 还有 13 天', 'material-symbols:play-circle-outline-rounded'],
-  ['ChatGPT Plus 会员', '6月5日 还有 16 天', 'material-symbols:all-inclusive-rounded'],
-  ['域名 - xiamuyouran.com', '6月18日 还有 29 天', 'material-symbols:language-rounded'],
-  ['平安百万医疗险', '6月25日 还有 36 天', 'material-symbols:health-and-safety-outline-rounded']
-] as const;
-
-const projectItems = ref([
-  { name: '无限暖暖', type: '游戏', summary: '今日任务 5/8', extraA: '待办 3', extraB: '倒计时 2', cover: 'nikki', pinned: true },
-  { name: '原神', type: '游戏', summary: '今日任务 4/9', extraA: '待办 2', extraB: '倒计时 1', cover: 'genshin', pinned: false },
-  { name: '日本旅行 2026', type: '旅行', summary: '待办 12', extraA: '行程 6', extraB: '倒计时 3', cover: 'japan', pinned: false },
-  { name: 'OpenAI 学习计划', type: '学习', summary: '本周目标 3/5', extraA: '待办 4', extraB: '笔记 7', cover: 'openai', pinned: false }
-]);
-
-const status = ref([
-  ['AI 总结完成：日本旅行行前清单', '10:42'],
-  ['文件上传完成：IMG_2024.jpg', '10:31'],
-  ['提醒触发：腾讯视频 VIP 即将到期', '09:00'],
-  ['数据同步完成', '08:20'],
-  ['AI 总结完成：本周学习复盘', '昨天 22:15']
-]);
-
-const aiSuggestions = [
-  '你昨天的日记情绪较稳定，建议继续保持晨间记录。',
-  '日本旅行项目有 3 个待办即将开始，记得安排时间。',
-  '无限暖暖有活动提醒，别错过奖励。',
-  '本周学习计划只差 2 次打卡，今晚完成会很轻松。'
+const expiringItems: ExpiringItem[] = [
+  { title: '腾讯视频 VIP', date: '6月2日', days: 13, icon: 'material-symbols:play-circle-outline-rounded', tone: 'orange' },
+  { title: 'ChatGPT Plus 会员', date: '6月5日', days: 16, icon: 'material-symbols:all-inclusive-rounded', tone: 'slate' },
+  { title: '域名 - xiamuyouran.com', date: '6月18日', days: 29, icon: 'material-symbols:language-rounded', tone: 'blue', tag: '域名' },
+  { title: '平安百万医疗险', date: '6月25日', days: 36, icon: 'material-symbols:health-and-safety-outline-rounded', tone: 'orange', tag: '保险' }
 ];
 
-const quickActions = [
-  ['添加待办', 'material-symbols:check-box-rounded'],
-  ['记录日记', 'material-symbols:article-outline-rounded'],
-  ['写笔记', 'material-symbols:edit-note-outline-rounded'],
-  ['上传图册', 'material-symbols:add-photo-alternate-outline-rounded'],
-  ['记账', 'material-symbols:history-rounded'],
-  ['搜索', 'material-symbols:search-rounded'],
-  ['导入数据', 'material-symbols:upload-file-outline-rounded'],
-  ['更多', 'material-symbols:more-horiz-rounded']
-] as const;
-
-const filteredProjects = computed(() => {
-  if (projectFilter.value === '全部') return projectItems.value;
-  return projectItems.value.filter(item => item.type === projectFilter.value);
-});
-
-const doneCount = computed(() => todos.value.filter(item => item.done).length);
-const todoCount = computed(() => todos.value.length - doneCount.value);
-const scheduleCount = computed(() => (summaryRange.value === 'today' ? 3 : 9));
-const pendingAlertCount = computed(() => (weatherMode.value === 'today' ? 1 : 2));
-const expiringCount = computed(() => expiring.length);
-const selectedSuggestion = computed(() => aiSuggestions[aiIndex.value]);
-const currentWeatherLabel = computed(() =>
-  weatherMode.value === 'today' ? '5月20日 周二' : '日本旅行模式 · 东京'
-);
-const currentWeatherValue = computed(() =>
-  weatherMode.value === 'today' ? '多云 18℃ - 25℃' : '晴 21℃ - 27℃'
-);
-
-const projectRouteKeyMap = {
-  无限暖暖: 'infinity-nikki',
-  '日本旅行 2026': 'japan-travel'
-} as const;
-
-function openProjects() {
-  routerPushByKey('projects');
-}
-
-function openProject(name: string) {
-  const routeKey = projectRouteKeyMap[name as keyof typeof projectRouteKeyMap];
-
-  if (routeKey) {
-    routerPushByKey(routeKey);
-    return;
+const projects: ProjectItem[] = [
+  {
+    title: '无限暖暖',
+    tag: '游戏',
+    image: 'https://images.unsplash.com/photo-1618331835717-801e976710b2?auto=format&fit=crop&w=800&q=80',
+    stats: [
+      { label: '今日任务', value: '5/8' },
+      { label: '待办', value: '3' },
+      { label: '倒计时', value: '2' }
+    ],
+    bottomLeft: '版本更新 5月28日',
+    daysLeft: 8,
+    urgent: true,
+    routeKey: 'infinity-nikki'
+  },
+  {
+    title: '原神',
+    tag: '游戏',
+    image: 'https://images.unsplash.com/photo-1550053912-421714856f61?auto=format&fit=crop&w=800&q=80',
+    stats: [
+      { label: '今日任务', value: '4/9' },
+      { label: '待办', value: '2' },
+      { label: '倒计时', value: '1' }
+    ],
+    bottomLeft: '版本更新 6月12日',
+    daysLeft: 23
+  },
+  {
+    title: '日本旅行 2026',
+    tag: '旅行',
+    image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=800&q=80',
+    stats: [
+      { label: '待办', value: '12' },
+      { label: '行程', value: '6' },
+      { label: '倒计时', value: '3' }
+    ],
+    bottomLeft: '出发时间 2026年3月18日',
+    daysLeft: 302,
+    routeKey: 'japan-travel'
+  },
+  {
+    title: 'OpenAI 学习计划',
+    tag: '学习',
+    image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=800&q=80',
+    stats: [
+      { label: '本周目标', value: '3/5' },
+      { label: '待办', value: '4' },
+      { label: '笔记', value: '7' }
+    ],
+    bottomLeft: '下次复盘 5月25日',
+    daysLeft: 5,
+    urgent: true
   }
+];
 
-  info('项目详情待接入', name);
+const statsData: StatItem[] = [
+  { label: '工作', percent: 32, tone: 'primary' },
+  { label: '学习', percent: 24, tone: 'blue' },
+  { label: '生活', percent: 21, tone: 'green' },
+  { label: '娱乐', percent: 15, tone: 'orange' },
+  { label: '旅行', percent: 8, tone: 'pink' }
+];
+
+const shortcuts: ShortcutItem[] = [
+  { label: '添加待办', icon: 'material-symbols:check-box-rounded', tone: 'primary' },
+  { label: '记录日记', icon: 'material-symbols:article-outline-rounded', tone: 'purple' },
+  { label: '写笔记', icon: 'material-symbols:edit-note-rounded', tone: 'cyan' },
+  { label: '上传图册', icon: 'material-symbols:add-photo-alternate-rounded', tone: 'blue' },
+  { label: '记账', icon: 'material-symbols:percent-rounded', tone: 'green' },
+  { label: '搜索', icon: 'material-symbols:search-rounded', tone: 'orange' },
+  { label: '导入数据', icon: 'material-symbols:download-rounded', tone: 'primary' },
+  { label: '更多', icon: 'material-symbols:more-horiz-rounded', tone: 'slate' }
+];
+
+const events = ref<EventItem[]>([
+  { prefix: 'AI 总结完成', content: '日本旅行行前清单', time: '10:42', tone: 'primary' },
+  { prefix: '文件上传完成', content: 'IMG_2024.jpg', time: '10:31', tone: 'purple' },
+  { prefix: '提醒触发', content: '腾讯视频 VIP 即将到期', time: '09:00', tone: 'pink' },
+  { prefix: '数据同步完成', content: '', time: '08:20', tone: 'green' },
+  { prefix: 'AI 总结完成', content: '本周学习复盘', time: '昨天 22:15', tone: 'primary' }
+]);
+
+const overviewStats = computed(() => [
+  { label: '待办事项', value: 8 },
+  { label: '今日日程', value: 3 },
+  { label: '即将到期', value: 2 },
+  { label: '待处理提醒', value: weatherMode.value === 'today' ? 1 : 2 }
+]);
+
+const currentWeatherLabel = computed(() => (weatherMode.value === 'today' ? '5月20日 周二' : '日本旅行模式 · 东京'));
+const currentWeatherValue = computed(() => (weatherMode.value === 'today' ? '多云 18℃ - 25℃' : '晴 21℃ - 27℃'));
+
+function getTagTone(tag: TodoTag | ProjectTag) {
+  const toneMap: Record<TodoTag | ProjectTag, Tone> = {
+    工作: 'blue',
+    生活: 'purple',
+    学习: 'green',
+    旅行: 'orange',
+    游戏: 'pink'
+  };
+
+  return toneMap[tag];
 }
 
 function toggleTodo(index: number) {
@@ -150,16 +225,13 @@ function createTodo() {
   success('已添加待办', `${title} · ${time}`);
 }
 
-function cycleSuggestion() {
-  aiIndex.value = (aiIndex.value + 1) % aiSuggestions.length;
-  info('AI 建议已刷新', `当前建议 ${aiIndex.value + 1}/${aiSuggestions.length}`);
-}
+function openProject(project: ProjectItem) {
+  if (project.routeKey) {
+    routerPushByKey(project.routeKey);
+    return;
+  }
 
-function toggleProjectPin(name: string) {
-  const target = projectItems.value.find(item => item.name === name);
-  if (!target) return;
-  target.pinned = !target.pinned;
-  info(target.pinned ? '已置顶项目' : '已取消置顶', target.name);
+  info('项目详情待接入', project.title);
 }
 
 function runQuickAction(label: string) {
@@ -173,12 +245,12 @@ function runQuickAction(label: string) {
     return;
   }
 
-  info('快捷入口演示', `${label} 交互已触发`);
-}
+  if (label === '搜索') {
+    info('搜索入口演示', '后续可接入全局搜索');
+    return;
+  }
 
-function switchRange(range: 'today' | 'week') {
-  summaryRange.value = range;
-  info(range === 'today' ? '切回今日概览' : '已切换到本周视角');
+  info('快捷入口演示', `${label} 交互已触发`);
 }
 
 function switchWeather() {
@@ -191,29 +263,15 @@ function scrollToRealtime() {
   info('已定位到实时状态', '查看最新同步与提醒');
 }
 
-function scrollStatusList(direction: 'up' | 'down') {
-  statusListRef.value?.scrollBy({
-    top: direction === 'up' ? -88 : 88,
-    behavior: 'smooth'
-  });
-  info(direction === 'up' ? '向上查看动态' : '向下查看动态');
-}
-
-function setProjectFilter(filter: '全部' | '游戏' | '旅行' | '学习') {
-  projectFilter.value = filter;
-  info('项目筛选已切换', filter);
-}
-
 function addTimelineEvent() {
-  status.value.unshift(['手动记录：晚间复盘已加入时间线', '刚刚']);
+  events.value.unshift({ prefix: '手动记录', content: '晚间复盘已加入时间线', time: '刚刚', tone: 'primary' });
   showEventModal.value = false;
   success('已加入实时状态', '晚间复盘事件已写入');
 }
 </script>
 
 <template>
-  <LifeAppShell
-    active="首页"
+  <LifeGeminiShell
     title="上午好，夏目悠然 ☀️"
     description="新的一天，从有序开始"
     :breadcrumbs="[{ label: '首页' }]"
@@ -221,190 +279,179 @@ function addTimelineEvent() {
     <LifeToastHost :items="toasts" @close="removeToast" />
 
     <template #actions>
-      <button class="lm-pill weather-pill" type="button" @click="switchWeather">
+      <button class="home-weather" type="button" @click="switchWeather">
         <span>{{ currentWeatherLabel }}</span>
         <strong>{{ currentWeatherValue }}</strong>
         <SvgIcon :icon="weatherMode === 'today' ? 'material-symbols:partly-cloudy-day-rounded' : 'material-symbols:luggage-rounded'" />
       </button>
-      <button class="lm-icon-btn" type="button" aria-label="搜索" @click="runQuickAction('搜索')">
+      <button class="home-icon-btn" type="button" aria-label="搜索" @click="runQuickAction('搜索')">
         <SvgIcon icon="material-symbols:search-rounded" />
       </button>
-      <button class="lm-icon-btn dot" type="button" aria-label="定位实时状态" @click="scrollToRealtime">
+      <button class="home-icon-btn has-dot" type="button" aria-label="定位实时状态" @click="scrollToRealtime">
         <SvgIcon icon="material-symbols:notifications-outline-rounded" />
       </button>
-      <button class="lm-purple-btn round-only" type="button" aria-label="新增待办" @click="openTodoModal">
+      <button class="home-add-btn" type="button" aria-label="新增待办" @click="openTodoModal">
         <SvgIcon icon="material-symbols:add-rounded" />
       </button>
     </template>
 
-    <section class="summary-switch">
-      <button :class="{ active: summaryRange === 'today' }" type="button" @click="switchRange('today')">今日</button>
-      <button :class="{ active: summaryRange === 'week' }" type="button" @click="switchRange('week')">本周</button>
-    </section>
-
-    <section class="lm-grid home-summary">
-      <article class="lm-card overview-card">
-        <div class="lm-card-title">
-          <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:calendar-month-rounded" /></span>今日概览</h2>
-          <button type="button" @click="switchRange(summaryRange === 'today' ? 'week' : 'today')">
-            {{ summaryRange === 'today' ? '切换本周' : '切换今日' }}
-          </button>
-        </div>
-        <div class="overview-numbers">
-          <div><strong>{{ todoCount }}</strong><span>待办事项</span></div>
-          <div><strong>{{ scheduleCount }}</strong><span>{{ summaryRange === 'today' ? '今日日程' : '本周日程' }}</span></div>
-          <div><strong>{{ expiringCount }}</strong><span>即将到期</span></div>
-          <div><strong>{{ pendingAlertCount }}</strong><span>待处理提醒</span></div>
-        </div>
-        <div class="soft-chart">
-          <i></i><i></i><i></i><i></i><i></i>
-        </div>
-        <p class="overview-note">已完成 {{ doneCount }} 项，继续保持这个节奏就很好啦 💜</p>
-      </article>
-
-      <article class="lm-card todo-card">
-        <div class="lm-card-title">
-          <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:edit-calendar-outline-rounded" /></span>今日待办</h2>
-          <button type="button" @click="openTodoModal">添加</button>
-        </div>
-        <div class="todo-list">
-          <button
-            v-for="(item, index) in todos"
-            :key="item.title + item.time"
-            class="todo-item"
-            :class="{ done: item.done }"
-            type="button"
-            @click="toggleTodo(index)"
-          >
-            <span class="check"></span>
-            <strong>{{ item.title }}</strong>
-            <em>{{ item.tag }}</em>
-            <time>{{ item.time }}</time>
-            <span class="circle"></span>
-          </button>
-        </div>
-        <button class="add-todo" type="button" @click="openTodoModal">＋ 添加待办</button>
-      </article>
-
-      <article class="lm-card expire-card">
-        <div class="lm-card-title">
-          <h2><span class="lm-mini-icon pink"><SvgIcon icon="material-symbols:event-upcoming-outline-rounded" /></span>即将到期（30 天内）</h2>
-          <button type="button" @click="info('到期提醒', '这里可以继续下钻到完整列表')">查看全部</button>
-        </div>
-        <div class="expire-list">
-          <div v-for="item in expiring" :key="item[0]">
-            <span class="lm-soft-icon"><SvgIcon :icon="item[2]" /></span>
-            <strong>{{ item[0] }}</strong>
-            <time>{{ item[1] }}</time>
+    <div class="home-dashboard">
+      <section class="home-row home-summary">
+        <article class="home-card overview-card">
+          <div class="home-card-head">
+            <h2><span class="home-title-icon primary"><SvgIcon icon="material-symbols:event-available-outline-rounded" /></span>今日概览</h2>
+            <button type="button" @click="info('今日概览', '后续可进入完整概览')">更多 <SvgIcon icon="material-symbols:chevron-right-rounded" /></button>
           </div>
-        </div>
-      </article>
-    </section>
 
-    <section class="lm-card project-strip">
-      <div class="lm-card-title project-strip-head">
-        <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:folder-outline-rounded" /></span>项目总览</h2>
-        <div class="project-filters">
-          <button type="button" @click="openProjects">全部项目</button>
-          <button
-            v-for="item in ['全部', '游戏', '旅行', '学习']"
-            :key="item"
-            :class="{ active: projectFilter === item }"
-            type="button"
-            @click="setProjectFilter(item as '全部' | '游戏' | '旅行' | '学习')"
-          >
-            {{ item }}
-          </button>
-        </div>
-      </div>
-      <div class="home-projects">
-        <article
-          v-for="item in filteredProjects"
-          :key="item.name"
-          role="button"
-          tabindex="0"
-          @click="openProject(item.name)"
-          @keydown.enter="openProject(item.name)"
-          @keydown.space.prevent="openProject(item.name)"
-        >
-          <button class="pin-btn" type="button" @click.stop="toggleProjectPin(item.name)">
-            <SvgIcon :icon="item.pinned ? 'material-symbols:star-rounded' : 'material-symbols:star-outline-rounded'" />
-          </button>
-          <div class="home-project-cover" :class="item.cover"></div>
-          <h3>{{ item.name }} <span>{{ item.type }}</span></h3>
-          <div class="home-project-meta">
-            <span>{{ item.summary }}</span>
-            <span>{{ item.extraA }}</span>
-            <span>{{ item.extraB }}</span>
+          <div class="overview-numbers">
+            <div v-for="item in overviewStats" :key="item.label">
+              <strong>{{ item.value }}</strong>
+              <span>{{ item.label }}</span>
+            </div>
           </div>
-          <footer>版本更新 5月28日 <b>还有 8 天</b></footer>
+
+          <div class="overview-chart" aria-hidden="true">
+            <svg viewBox="0 0 240 72" preserveAspectRatio="none">
+              <path class="chart-fill" d="M0 72 L0 42 C25 26 48 58 74 36 C100 14 121 55 148 30 C174 6 195 45 218 20 C229 9 240 26 240 26 L240 72 Z" />
+              <path class="chart-line" d="M0 42 C25 26 48 58 74 36 C100 14 121 55 148 30 C174 6 195 45 218 20 C229 9 240 26 240 26" />
+              <circle cx="74" cy="36" r="4" />
+              <circle cx="148" cy="30" r="4" />
+              <circle cx="218" cy="20" r="4" />
+            </svg>
+            <div><span>5/16</span><span>5/17</span><span>5/18</span><span>5/19</span><span>5/20</span></div>
+          </div>
+
+          <p class="overview-note"><SvgIcon icon="material-symbols:sentiment-satisfied-outline-rounded" />保持节奏，你已经很棒了！ 💜</p>
         </article>
-      </div>
-    </section>
 
-    <section class="lm-grid cols-4 home-bottom">
-      <article class="lm-card ai-card">
-        <div class="lm-card-title">
-          <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:auto-awesome-rounded" /></span>AI 今日建议</h2>
-          <button type="button" @click="cycleSuggestion">换一条</button>
-        </div>
-        <ul>
-          <li>{{ selectedSuggestion }}</li>
-          <li>如果今天只做一件事，优先完成最晚那条待办会更轻松。</li>
-          <li>睡前花 5 分钟收一下桌面，明早会更舒服。</li>
-        </ul>
-        <button class="lm-plain-btn" type="button" @click="cycleSuggestion">查看完整建议 ›</button>
-        <div class="lm-robot"></div>
-      </article>
-
-      <article class="lm-card month-card">
-        <div class="lm-card-title">
-          <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:donut-large-rounded" /></span>本月统计</h2>
-        </div>
-        <div class="donut"></div>
-        <div class="legend">
-          <span><i></i>工作 32%</span>
-          <span><i></i>学习 24%</span>
-          <span><i></i>生活 21%</span>
-          <span><i></i>娱乐 15%</span>
-          <span><i></i>旅行 8%</span>
-        </div>
-        <p>总时长 <strong>128 小时</strong>　较上月 <b>+12%</b></p>
-      </article>
-
-      <article class="lm-card quick-card">
-        <div class="lm-card-title">
-          <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:verified-user-outline-rounded" /></span>快捷入口</h2>
-        </div>
-        <div class="quick-grid">
-          <button v-for="item in quickActions" :key="item[0]" type="button" @click="runQuickAction(item[0])">
-            <SvgIcon :icon="item[1]" />{{ item[0] }}
-          </button>
-        </div>
-      </article>
-
-      <article ref="realtimeCardRef" class="lm-card realtime-card">
-        <div class="lm-card-title">
-          <h2><span class="lm-mini-icon"><SvgIcon icon="material-symbols:sensors-rounded" /></span>实时状态（SSE）</h2>
-          <div class="status-actions">
-            <button class="lm-icon-btn" type="button" aria-label="向上滑动动态" @click="scrollStatusList('up')">
-              <SvgIcon icon="material-symbols:keyboard-arrow-up-rounded" />
-            </button>
-            <button class="lm-icon-btn" type="button" aria-label="向下滑动动态" @click="scrollStatusList('down')">
-              <SvgIcon icon="material-symbols:keyboard-arrow-down-rounded" />
-            </button>
-            <button type="button" @click="showEventModal = true">新增事件 ›</button>
+        <article class="home-card todo-card">
+          <div class="home-card-head">
+            <h2><span class="home-title-icon blue"><SvgIcon icon="material-symbols:edit-calendar-outline-rounded" /></span>今日待办</h2>
+            <button type="button" @click="openTodoModal">查看全部</button>
           </div>
-        </div>
-        <div ref="statusListRef" class="status-list">
-          <div v-for="item in status" :key="item[0] + item[1]">
-            <span></span>
-            <strong>{{ item[0] }}</strong>
-            <time>{{ item[1] }}</time>
+
+          <div class="todo-list">
+            <button
+              v-for="(item, index) in todos"
+              :key="item.title + item.time"
+              class="todo-item"
+              :class="{ done: item.done }"
+              type="button"
+              @click="toggleTodo(index)"
+            >
+              <span class="todo-check"></span>
+              <strong>{{ item.title }}</strong>
+              <em :class="`tone-${getTagTone(item.tag)}`">{{ item.tag }}</em>
+              <time>{{ item.time }}</time>
+              <span class="todo-circle"></span>
+            </button>
           </div>
+
+          <button class="add-todo" type="button" @click="openTodoModal"><SvgIcon icon="material-symbols:add-rounded" />添加待办</button>
+        </article>
+
+        <article class="home-card expire-card">
+          <div class="home-card-head">
+            <h2><span class="home-title-icon pink"><SvgIcon icon="material-symbols:alarm-on-rounded" /></span>即将到期 <small>（30天内）</small></h2>
+            <button type="button" @click="info('到期提醒', '这里可以继续下钻到完整列表')">查看全部</button>
+          </div>
+
+          <div class="expire-list">
+            <div v-for="item in expiringItems" :key="item.title">
+              <span class="expire-icon" :class="`tone-${item.tone}`"><SvgIcon :icon="item.icon" /></span>
+              <strong>{{ item.title }} <em v-if="item.tag" :class="`tone-${item.tone}`">{{ item.tag }}</em></strong>
+              <time><b>{{ item.date }}</b> 还有 {{ item.days }} 天</time>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="home-card project-strip">
+        <div class="home-card-head project-strip-head">
+          <h2><span class="home-title-icon primary"><SvgIcon icon="material-symbols:folder-special-rounded" /></span>项目总览</h2>
         </div>
-      </article>
-    </section>
+
+        <div class="project-grid">
+          <article
+            v-for="item in projects"
+            :key="item.title"
+            class="project-card"
+            role="button"
+            tabindex="0"
+            @click="openProject(item)"
+            @keydown.enter="openProject(item)"
+            @keydown.space.prevent="openProject(item)"
+          >
+            <div class="project-cover" :style="{ backgroundImage: `url(${item.image})` }"></div>
+            <div class="project-body">
+              <h3>{{ item.title }} <span :class="`tone-${getTagTone(item.tag)}`">{{ item.tag }}</span></h3>
+              <div class="project-meta">
+                <span v-for="stat in item.stats" :key="stat.label">{{ stat.label }} <b>{{ stat.value }}</b></span>
+              </div>
+              <footer>
+                <span>{{ item.bottomLeft }}</span>
+                <b :class="{ urgent: item.urgent }">还有 {{ item.daysLeft }} 天</b>
+              </footer>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-row home-bottom">
+        <article class="home-card ai-card">
+          <div class="home-card-head">
+            <h2><span class="home-title-icon primary"><SvgIcon icon="material-symbols:auto-awesome-rounded" /></span>AI 今日建议</h2>
+          </div>
+          <ul>
+            <li>你昨天的日记情绪整体积极，建议继续保持哦～</li>
+            <li>日本旅行项目有 3 个待办即将开始，记得安排时间</li>
+            <li>无限暖暖有直播活动提醒，别错过奖励</li>
+            <li>本周学习计划完成度 60%，继续加油 💪</li>
+          </ul>
+          <button type="button" @click="info('AI 建议', '后续可打开完整建议列表')">查看完整建议 <SvgIcon icon="material-symbols:chevron-right-rounded" /></button>
+          <div class="home-robot"></div>
+        </article>
+
+        <article class="home-card month-card">
+          <div class="home-card-head">
+            <h2><span class="home-title-icon blue"><SvgIcon icon="material-symbols:pie-chart-rounded" /></span>本月统计</h2>
+          </div>
+          <div class="stats-wrap">
+            <div class="donut"><span>128h</span></div>
+            <div class="legend">
+              <span v-for="item in statsData" :key="item.label"><i :class="`tone-${item.tone}`"></i>{{ item.label }} <b>{{ item.percent }}%</b></span>
+            </div>
+          </div>
+          <p>总时长 <strong>128 小时</strong><b>较上月 +12% ↗</b></p>
+        </article>
+
+        <article class="home-card quick-card">
+          <div class="home-card-head">
+            <h2><span class="home-title-icon primary"><SvgIcon icon="material-symbols:diamond-rounded" /></span>快捷入口</h2>
+          </div>
+          <div class="quick-grid">
+            <button v-for="item in shortcuts" :key="item.label" type="button" @click="runQuickAction(item.label)">
+              <span :class="`tone-${item.tone}`"><SvgIcon :icon="item.icon" /></span>
+              {{ item.label }}
+            </button>
+          </div>
+        </article>
+
+        <article ref="realtimeCardRef" class="home-card realtime-card">
+          <div class="home-card-head">
+            <h2><span class="home-title-icon slate"><SvgIcon icon="material-symbols:format-list-bulleted-rounded" /></span>实时状态 <small>（SSE）</small></h2>
+            <button type="button" @click="scrollToRealtime">全部事件 <SvgIcon icon="material-symbols:chevron-right-rounded" /></button>
+          </div>
+          <div ref="statusListRef" class="event-list">
+            <div v-for="item in events" :key="item.prefix + item.content + item.time">
+              <span :class="`tone-${item.tone}`"></span>
+              <p><b>{{ item.prefix }}</b>{{ item.content ? `：${item.content}` : '' }}</p>
+              <time>{{ item.time }}</time>
+            </div>
+          </div>
+        </article>
+      </section>
+    </div>
 
     <LifeModal
       v-model:show="showTodoModal"
@@ -448,438 +495,669 @@ function addTimelineEvent() {
         <p>用于演示搜索 / 通知 / SSE 状态补录这类轻量交互。</p>
       </div>
     </LifeModal>
-  </LifeAppShell>
+  </LifeGeminiShell>
 </template>
 
 <style scoped>
+.home-dashboard {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 24px;
+}
+
+.home-row {
+  display: grid;
+  gap: 24px;
+}
+
 .home-summary {
-  grid-template-columns: 1.05fr 1fr 1.35fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
 }
 
-.summary-switch {
+.home-bottom {
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+}
+
+.home-card {
+  min-width: 0;
+  border: 1px solid #eef1f6;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(21, 31, 56, 0.05);
+}
+
+.home-summary > .home-card,
+.home-bottom > .home-card {
+  min-height: 300px;
+  padding: 24px;
+}
+
+.home-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.home-card-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  color: #1f2633;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.home-card-head h2 small {
+  color: #6f7688;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.home-card-head button {
   display: inline-flex;
-  gap: 6px;
-  margin-bottom: 14px;
-  padding: 4px;
-  border: 1px solid #eceef6;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.86);
-}
-
-.summary-switch button,
-.project-filters button,
-.pin-btn,
-.todo-item {
+  align-items: center;
+  gap: 4px;
   border: 0;
-}
-
-.summary-switch button,
-.project-filters button {
-  height: 28px;
-  padding: 0 14px;
-  border-radius: 999px;
   background: transparent;
-  color: #697183;
-  font-size: 11px;
+  color: #8770ee;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.summary-switch button.active,
-.project-filters button.active {
-  background: linear-gradient(135deg, #7258ed, #765ce8);
-  color: #fff;
-  box-shadow: 0 10px 20px rgba(111, 83, 231, 0.18);
+.home-title-icon {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 20px;
 }
 
-.round-only {
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border-radius: 50%;
+.home-weather,
+.home-icon-btn,
+.home-add-btn {
+  border: 0;
+  box-shadow: 0 10px 24px rgba(21, 31, 56, 0.08);
 }
 
-.weather-pill {
-  height: 48px;
-  align-items: flex-start;
-  flex-direction: column;
+.home-weather {
   position: relative;
-  min-width: 143px;
-  padding: 8px 50px 8px 13px;
-  text-align: left;
+  display: grid;
+  min-width: 160px;
+  min-height: 48px;
+  padding: 7px 44px 7px 12px;
+  border-radius: 16px;
+  background: #fff;
+  color: #5b6473;
+  text-align: right;
 }
 
-.weather-pill span {
-  color: #626a7d;
-  font-size: 10px;
+.home-weather span {
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.weather-pill strong {
-  color: #1c2232;
+.home-weather strong {
+  margin-top: 2px;
   font-size: 11px;
+  font-weight: 500;
 }
 
-.weather-pill .svg-icon {
+.home-weather .svg-icon {
   position: absolute;
   right: 13px;
   top: 12px;
-  color: #f2bd47;
-  font-size: 26px;
+  color: #f0b646;
+  font-size: 24px;
+}
+
+.home-icon-btn,
+.home-add-btn {
+  position: relative;
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  color: #5f6878;
+  font-size: 22px;
+}
+
+.home-icon-btn.has-dot::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #ef4d79;
+}
+
+.home-add-btn {
+  background: #6b57ff;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(107, 87, 255, 0.26);
 }
 
 .overview-numbers {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
   text-align: center;
 }
 
 .overview-numbers strong {
   display: block;
-  font-size: 25px;
+  color: #111827;
+  font-size: 40px;
   line-height: 1;
+  font-weight: 800;
 }
 
 .overview-numbers span {
   display: block;
-  margin-top: 10px;
-  color: #7e8495;
-  font-size: 10px;
+  margin-top: 12px;
+  color: #768093;
+  font-size: 13px;
+  font-weight: 650;
 }
 
-.soft-chart {
-  height: 74px;
+.overview-chart {
+  margin-top: 28px;
+}
+
+.overview-chart svg {
+  width: 100%;
+  height: 88px;
+}
+
+.chart-fill {
+  fill: rgba(107, 87, 255, 0.12);
+}
+
+.chart-line {
+  fill: none;
+  stroke: #8a78ff;
+  stroke-width: 2.8;
+}
+
+.overview-chart circle {
+  fill: #fff;
+  stroke: #8a78ff;
+  stroke-width: 2.4;
+}
+
+.overview-chart div {
   display: flex;
-  align-items: end;
-  gap: 0;
-  margin-top: 14px;
-  background: linear-gradient(180deg, transparent 0 68%, #f4f0ff 69%);
-  clip-path: polygon(0 58%, 18% 72%, 35% 47%, 52% 70%, 70% 28%, 86% 64%, 100% 42%, 100% 100%, 0 100%);
-}
-
-.soft-chart i {
-  flex: 1;
+  justify-content: space-between;
+  margin-top: 10px;
+  color: #9aa2b2;
+  font-size: 12px;
 }
 
 .overview-note {
-  margin: 9px 0 0;
-  color: #7b8192;
-  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 0;
+  color: #737b8e;
+  font-size: 13px;
 }
 
 .todo-list,
-.expire-list,
-.status-list {
+.expire-list {
   display: grid;
-  gap: 12px;
+  gap: 18px;
 }
 
 .todo-item {
   display: grid;
-  grid-template-columns: 13px minmax(0, 1fr) auto auto 13px;
-  gap: 9px;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto 18px;
+  gap: 14px;
   align-items: center;
-  padding: 0;
+  border: 0;
   background: transparent;
-  color: #343b4d;
-  font-size: 11px;
+  color: #394150;
+  font-size: 14px;
   text-align: left;
-}
-
-.todo-item.done strong {
-  color: #97a0b3;
-  text-decoration: line-through;
-}
-
-.todo-item.done em {
-  background: #f0ecff;
-  color: #745de8;
-}
-
-.todo-item.done .check {
-  border-color: #765ce8;
-  background: #765ce8;
-  box-shadow: inset 0 0 0 2px #fff;
 }
 
 .todo-item strong,
 .expire-list strong,
-.status-list strong {
+.event-list p {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.todo-item em {
-  padding: 2px 6px;
+.todo-item.done strong {
+  color: #98a1b2;
+  text-decoration: line-through;
+}
+
+.todo-check,
+.todo-circle {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #c9d0dc;
   border-radius: 5px;
-  background: #eef8f4;
-  color: #4d9a83;
-  font-style: normal;
-  font-size: 9px;
 }
 
-.todo-item time,
-.expire-list time,
-.status-list time {
-  color: #7c8394;
-  font-size: 10px;
-}
-
-.check,
-.circle {
-  width: 11px;
-  height: 11px;
-  border: 1px solid #cfd4e1;
-  border-radius: 3px;
-}
-
-.circle {
+.todo-circle {
   border-radius: 50%;
 }
 
-.add-todo {
-  width: 100%;
-  margin-top: 16px;
-  padding-top: 13px;
-  border-top: 1px solid #edf0f7;
-  background: transparent;
-  color: #7660e6;
+.todo-item.done .todo-check {
+  border-color: #6b57ff;
+  background: #6b57ff;
+  box-shadow: inset 0 0 0 3px #fff;
+}
+
+.todo-item em,
+.project-card h3 span,
+.expire-list em {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 7px;
   font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.todo-item time,
+.expire-list time {
+  color: #6f7688;
+  font-size: 13px;
+}
+
+.add-todo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 24px;
+  border: 1px dashed #dce1ea;
+  border-radius: 14px;
+  background: #fff;
+  color: #6b57ff;
+  font-size: 14px;
+  font-weight: 750;
 }
 
 .expire-list div {
   display: grid;
-  grid-template-columns: 31px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 18px;
   align-items: center;
-  gap: 12px;
+}
+
+.expire-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 24px;
+}
+
+.expire-list strong {
+  color: #2d3442;
+  font-size: 15px;
+}
+
+.expire-list time {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.expire-list time b {
+  color: #303847;
+  font-weight: 600;
 }
 
 .project-strip {
-  margin-top: 14px;
+  padding: 24px 28px 28px;
 }
 
 .project-strip-head {
+  margin-bottom: 20px;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 20px;
+}
+
+.project-card {
+  overflow: hidden;
+  border: 1px solid #eef1f6;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 26px rgba(51, 58, 88, 0.08);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.project-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 34px rgba(51, 58, 88, 0.12);
+}
+
+.project-cover {
+  height: 112px;
+  background-position: center;
+  background-size: cover;
+}
+
+.project-body {
+  padding: 14px 18px 0;
+}
+
+.project-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  color: #1f2633;
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.project-meta {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-}
-
-.project-filters {
-  display: inline-flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.home-projects {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.home-projects article {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid #edf0f6;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.pin-btn {
-  position: absolute;
-  top: 9px;
-  right: 9px;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  color: #745de8;
-  box-shadow: 0 8px 18px rgba(54, 61, 92, 0.12);
-}
-
-.home-project-cover {
-  height: 70px;
-}
-
-.home-project-cover.nikki,
-.home-project-cover.japan {
-  position: relative;
-}
-
-.home-project-cover.nikki {
-  background: linear-gradient(135deg, #dae8ff, #ffddea);
-}
-
-.home-project-cover.genshin {
-  background: linear-gradient(135deg, #c8e8ff 0 45%, #8dbf82 46%);
-}
-
-.home-project-cover.japan {
-  background: linear-gradient(180deg, #aad4f2 0 50%, #ffd9df 51%, #91aa7e 52%);
-}
-
-.home-project-cover.openai {
-  background: linear-gradient(135deg, #c7b4ff, #eadfff);
-}
-
-.home-projects h3 {
-  margin: 9px 10px 8px;
-  color: #171d2c;
+  gap: 8px;
+  color: #687184;
   font-size: 13px;
 }
 
-.home-projects h3 span {
-  margin-left: 5px;
-  padding: 1px 5px;
-  border-radius: 5px;
-  background: #eef8f4;
-  color: #519b87;
-  font-size: 9px;
-  font-weight: 500;
+.project-meta b {
+  margin-left: 4px;
+  color: #263041;
 }
 
-.home-project-meta {
+.project-card footer {
   display: flex;
   justify-content: space-between;
-  padding: 0 10px;
-  color: #596174;
-  font-size: 10px;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px 0;
+  border-top: 1px solid #eef1f6;
+  color: #8d95a5;
+  font-size: 13px;
 }
 
-.home-projects footer {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 12px;
-  padding: 9px 10px;
-  border-top: 1px solid #edf0f6;
-  color: #8b91a1;
-  font-size: 9px;
+.project-card footer b {
+  color: #6b57ff;
 }
 
-.home-projects footer b {
-  color: #7660e6;
-}
-
-.home-bottom {
-  grid-template-columns: 1fr 0.92fr 0.95fr 1fr;
-  margin-top: 14px;
+.project-card footer b.urgent {
+  color: #ef6b8d;
 }
 
 .ai-card {
   position: relative;
-  min-height: 178px;
+  overflow: hidden;
 }
 
 .ai-card ul {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
   margin: 0;
-  padding-left: 15px;
-  color: #4d5568;
-  font-size: 10px;
-  line-height: 2;
+  padding-left: 18px;
+  color: #4f586b;
+  font-size: 13px;
+  line-height: 1.65;
 }
 
-.ai-card .lm-robot {
+.ai-card > button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  min-height: 34px;
+  margin-top: 24px;
+  padding: 0 16px;
+  border: 1px solid #edf0f6;
+  border-radius: 999px;
+  background: #fafbff;
+  color: #7760e8;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.home-robot {
   position: absolute;
-  right: 20px;
-  bottom: 14px;
+  right: 34px;
+  bottom: 24px;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 45%, #42d6ff 0 5%, transparent 6%),
+    radial-gradient(circle at 64% 45%, #42d6ff 0 5%, transparent 6%),
+    radial-gradient(ellipse at 50% 47%, #263b72 0 30%, transparent 31%),
+    linear-gradient(135deg, #f8fbff, #dce4ff);
+  box-shadow: 0 18px 36px rgba(107, 87, 255, 0.14);
+  opacity: 0.88;
+}
+
+.stats-wrap {
+  display: flex;
+  align-items: center;
+  gap: 26px;
 }
 
 .donut {
-  width: 92px;
-  height: 92px;
-  margin: 4px auto 10px;
-  border-radius: 50%;
-  background: conic-gradient(#765ce8 0 32%, #5b8df0 32% 56%, #62cfa8 56% 77%, #f1ad43 77% 92%, #eb6d91 92%);
   position: relative;
+  display: grid;
+  width: 112px;
+  height: 112px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: conic-gradient(#6b57ff 0 32%, #38bdf8 32% 56%, #62cfa8 56% 77%, #f8b84e 77% 92%, #f06b98 92%);
 }
 
 .donut::after {
   content: '';
   position: absolute;
-  inset: 24px;
+  inset: 30px;
   border-radius: 50%;
   background: #fff;
 }
 
+.donut span {
+  position: relative;
+  z-index: 1;
+  color: #263041;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .legend {
   display: grid;
-  gap: 6px;
+  flex: 1;
+  gap: 9px;
   color: #596174;
-  font-size: 10px;
+  font-size: 13px;
+}
+
+.legend span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.legend i,
+.event-list > div > span {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
 }
 
 .legend i {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-right: 6px;
-  border-radius: 50%;
-  background: #765ce8;
+  margin-right: 8px;
 }
 
 .month-card p {
-  margin: 12px 0 0;
-  color: #7f8596;
-  font-size: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #eef1f6;
+  color: #7f8798;
+  font-size: 13px;
 }
 
-.month-card b {
-  color: #39ad7e;
+.month-card p b {
+  color: #27a36f;
 }
 
 .quick-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 9px;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 18px 14px;
 }
 
 .quick-grid button {
   display: grid;
-  place-items: center;
-  gap: 6px;
-  min-height: 48px;
-  border-radius: 8px;
-  background: #f8f8fe;
-  color: #626a7b;
-  font-size: 10px;
-}
-
-.quick-grid .svg-icon {
-  color: #725ae8;
-  font-size: 21px;
-}
-
-.status-list div {
-  display: grid;
-  grid-template-columns: 7px minmax(0, 1fr) auto;
-  align-items: center;
+  justify-items: center;
   gap: 9px;
+  border: 0;
+  background: transparent;
+  color: #5f6878;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
-.status-list {
-  max-height: 124px;
+.quick-grid button span {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 16px;
+  font-size: 24px;
+  transition: transform 0.18s ease;
+}
+
+.quick-grid button:hover span {
+  transform: scale(1.05);
+}
+
+.event-list {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  max-height: 216px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-left: 14px;
   scroll-behavior: smooth;
 }
 
-.status-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.event-list::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 4px;
+  width: 1px;
+  background: #eef1f6;
 }
 
-.status-actions .lm-icon-btn {
-  width: 28px;
-  height: 28px;
-  font-size: 18px;
+.event-list div {
+  position: relative;
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  color: #596174;
+  font-size: 13px;
 }
 
-.status-list span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #765ce8;
+.event-list p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.event-list p b {
+  color: #303847;
+}
+
+.event-list time {
+  color: #8d95a5;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.tone-primary {
+  background: #f0efff;
+  color: #6b57ff;
+}
+
+.tone-blue {
+  background: #eef6ff;
+  color: #3385e5;
+}
+
+.tone-cyan {
+  background: #ecfeff;
+  color: #11a9bd;
+}
+
+.tone-green {
+  background: #edf9f2;
+  color: #31a876;
+}
+
+.tone-orange {
+  background: #fff7e9;
+  color: #e39a28;
+}
+
+.tone-pink {
+  background: #fff0f6;
+  color: #eb5f90;
+}
+
+.tone-purple {
+  background: #f5f0ff;
+  color: #8a5fe8;
+}
+
+.tone-red {
+  background: #fff1f2;
+  color: #ef4d5f;
+}
+
+.tone-slate {
+  background: #f3f5f8;
+  color: #687184;
 }
 
 .demo-form {
@@ -934,11 +1212,20 @@ function addTimelineEvent() {
   line-height: 1.6;
 }
 
-@media (max-width: 1180px) {
-  .home-summary,
-  .home-bottom,
-  .home-projects {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 760px) {
+  .stats-wrap {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .home-card {
+    border-radius: 18px;
+  }
+
+  .home-summary > .home-card,
+  .home-bottom > .home-card,
+  .project-strip {
+    padding: 18px;
   }
 }
 </style>
