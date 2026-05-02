@@ -230,6 +230,221 @@ export interface DetailMeta {
   value: string;
 }
 
+// ========== 游戏闭环模型 ==========
+
+/** 游戏版本状态 */
+export type GameVersionStatus = 'upcoming' | 'active' | 'ending' | 'ended' | 'archived';
+
+/** 游戏版本 */
+export interface GameVersion {
+  id: string;
+  projectId: string;
+  name: string;
+  title: string;
+  startAt: string;
+  endAt: string;
+  status: GameVersionStatus;
+  highlights: string[];
+  activityIds: string[];
+  summary?: string;
+  archivedAt?: string;
+}
+
+/** 游戏活动状态 */
+export type GameActivityStatus = 'upcoming' | 'active' | 'ending' | 'ended' | 'archived';
+
+/** 游戏活动 */
+export interface GameActivity {
+  id: string;
+  projectId: string;
+  versionId: string;
+  title: string;
+  description?: string;
+  startAt: string;
+  endAt: string;
+  status: GameActivityStatus;
+  priority: 'low' | 'normal' | 'high';
+  cover?: string;
+  targetIds: string[];
+  materialIds?: string[];
+  photoIds?: string[];
+  noteIds?: string[];
+  reminderRule?: ReminderRule;
+  archivedAt?: string;
+}
+
+/** 游戏目标类型 */
+export type GameTargetType = 'daily' | 'weekly' | 'activity' | 'custom';
+
+/** 游戏目标状态 */
+export type GameTargetStatus = 'todo' | 'done' | 'skipped' | 'expired' | 'archived';
+
+/** 游戏目标 */
+export interface GameTarget {
+  id: string;
+  projectId: string;
+  type: GameTargetType;
+  title: string;
+  description?: string;
+  status: GameTargetStatus;
+  progressCurrent?: number;
+  progressTarget?: number;
+  resetRule?: ResetRule;
+  versionId?: string;
+  activityId?: string;
+  dueAt?: string;
+  priority: 'low' | 'normal' | 'high';
+  pinnedToOverview?: boolean;
+  timelineRule: TimelineWriteRule;
+  archivedAt?: string;
+}
+
+/** 概览摘要规则 */
+export interface OverviewSummaryRule {
+  id: string;
+  projectId: string;
+  source: 'targets' | 'activities' | 'version' | 'materials' | 'gallery' | 'timeline' | 'ai';
+  enabled: boolean;
+  title: string;
+  maxItems: number;
+  priority: number;
+  filters: {
+    targetTypes?: GameTargetType[];
+    activityStatuses?: GameActivityStatus[];
+    onlyPinned?: boolean;
+    onlyHighPriority?: boolean;
+    withinHours?: number;
+  };
+  displayMode: 'metric' | 'list' | 'compact' | 'timeline';
+}
+
+/** 功能块 key */
+export type AbilityBlockKey =
+  | 'overview'
+  | 'targets'
+  | 'version_activity'
+  | 'materials'
+  | 'gallery'
+  | 'assets'
+  | 'timeline'
+  | 'ai';
+
+/** 功能块实例配置 */
+export interface AbilityInstanceConfig {
+  id: string;
+  projectId: string;
+  blockKey: AbilityBlockKey;
+  displayName: string;
+  enabled: boolean;
+  navigation: {
+    visible: boolean;
+    order: number;
+  };
+  summaryRules: OverviewSummaryRule[];
+  fields?: FieldConfig[];
+  behavior?: {
+    resetRules?: ResetRule[];
+    reminderRules?: ReminderRule[];
+    archiveRule?: ArchiveRule;
+  };
+  timeline?: {
+    enabled: boolean;
+    defaultWriteRule: TimelineWriteRule;
+  };
+}
+
+/** 时间轴事件类型 */
+export type TimelineEventType =
+  | 'target_done'
+  | 'target_skipped'
+  | 'target_expired'
+  | 'activity_started'
+  | 'activity_ending'
+  | 'activity_archived'
+  | 'version_archived'
+  | 'material_completed'
+  | 'photo_uploaded'
+  | 'note_created'
+  | 'ai_summary_generated';
+
+/** 时间轴事件 */
+export interface TimelineEvent {
+  id: string;
+  projectId: string;
+  occurredAt: string;
+  type: TimelineEventType;
+  title: string;
+  description?: string;
+  sourceBlockKey: AbilityBlockKey;
+  versionId?: string;
+  activityId?: string;
+  targetId?: string;
+  sensitivity: 'normal' | 'private';
+  displayInOverview: boolean;
+  aiReadable: boolean;
+}
+
+/** 重置规则 */
+export interface ResetRule {
+  type: 'none' | 'daily' | 'weekly' | 'activity' | 'custom';
+  time?: string;
+  weekday?: number;
+  inheritFromActivity?: boolean;
+}
+
+/** 提醒规则 */
+export interface ReminderRule {
+  enabled: boolean;
+  channels: ('app' | 'feishu' | 'webhook')[];
+  beforeMinutes: number[];
+  quietHours?: {
+    start: string;
+    end: string;
+  };
+}
+
+/** 归档规则 */
+export interface ArchiveRule {
+  type: 'manual' | 'on_activity_end' | 'on_version_end' | 'after_days';
+  afterDays?: number;
+  includeTargets: boolean;
+  includePhotos: boolean;
+  includeNotes: boolean;
+  generateTimelineSummary: boolean;
+}
+
+/** 时间轴写入规则 */
+export interface TimelineWriteRule {
+  mode: 'none' | 'detail' | 'daily_summary' | 'weekly_summary' | 'exception_only';
+  displayInOverview: boolean;
+  aiReadable: boolean;
+}
+
+/** 字段配置 */
+export interface FieldConfig {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'date' | 'select' | 'boolean' | 'progress';
+  required?: boolean;
+  options?: string[];
+}
+
+/** 概览摘要 */
+export interface OverviewSummary {
+  id: string;
+  ruleId: string;
+  title: string;
+  value?: string;
+  description?: string;
+  items?: Array<{
+    id: string;
+    label: string;
+    status?: string;
+    targetRoute?: string;
+  }>;
+  targetRoute?: string;
+}
+
 // ========== API 响应 ==========
 
 export interface ApiResponse<T> {
