@@ -23,7 +23,7 @@
 ```vue
 <LifeGeminiShell
   title="无限暖暖"
-  description="项目概览、日常进度、活动倒计时和最近动态。"
+  description="项目概览、任务目标、活动版本和长期时间轴。"
   :breadcrumbs="[
     { label: '首页', routeKey: 'home' },
     { label: '项目', routeKey: 'projects' },
@@ -195,6 +195,14 @@
 <LifeGeminiTabs v-model="activeTab" :tabs="tabs" />
 ```
 
+项目详情页规范：
+
+- tab 不应硬编码旧的“日常、倒计时、笔记、AI”结构。
+- tab 应优先由 `AbilityInstanceConfig` 中 `enabled + navigation.visible + navigation.order` 生成。
+- 功能块不必都成为 tab。比如无限暖暖的“素材收集”和“AI 助手”可以作为能力进入概览、时间轴和管理页配置，但不显示为一级 tab。
+- 具体数据的新增、查看、编辑和归档优先发生在对应 tab 内。概览只做摘要、跳转和建议，不承担完整管理职责。
+- 当前无限暖暖详情页默认 tab 为：概览、任务、活动与版本、图册、时间轴、账号资产。
+
 页面外层注意：
 
 - 不要给包裹 `ProjectHero + Tabs + Grid` 的父容器加统一 `gap`。
@@ -235,14 +243,15 @@
 
 - 组件本身已经包含白底卡片、圆角、封面图、标签、统计信息和底部统计区。
 - 页面只传数据和 actions，不重写 hero 外壳。
-- 管理页可以复用同一 hero，但 stats 可展示配置相关数据，例如任务模板、提醒规则、关联资产、创建时间、开始时间、类型。
+- 管理页可以复用同一 hero，但 stats 应优先展示配置相关数据，例如已启用功能块、导航可见功能块、概览摘要规则、时间轴写入规则、提醒规则数量。
+- 项目管理页应展示功能块实例配置，包括启停、导航可见性、概览摘要规则、时间轴写入策略、重置/提醒/归档规则。
 
 示例：
 
 ```vue
 <LifeGeminiProjectHero
   title="无限暖暖"
-  description="记录游戏日常、活动、版本与养成进度，管理账号与相关资源。"
+  description="记录任务目标、活动版本、素材收集、时间轴与账号资产。"
   :cover-src="coverUrl"
   cover-alt="无限暖暖项目封面"
   :tags="projectTags"
@@ -335,13 +344,16 @@
     <LifeGeminiProjectHero />
     <LifeGeminiTabs />
 
-    <section class="top-grid">
+    <section class="ability-config-grid">
+      <LifeGeminiCard title="功能块实例配置" />
+      <LifeGeminiCard title="概览摘要规则" />
+      <LifeGeminiCard title="时间轴写入规则" />
+    </section>
+
+    <section class="project-config-grid">
       <LifeGeminiCard title="基本信息" />
       <LifeGeminiCard title="游戏重置设置" />
       <LifeGeminiCard title="提醒规则" />
-    </section>
-
-    <section class="module-grid">
       <LifeGeminiCard title="日常任务模板" />
       <LifeGeminiCard title="关联资产" />
       <LifeGeminiCard title="图册与 OSS 同步" />
@@ -360,9 +372,15 @@
 - Tabs：`LifeGeminiTabs`
 - 卡片：`LifeGeminiCard`
 
+管理页内容优先级：
+
+- 第一优先级是功能块实例配置，包括启停、是否出现在项目导航、概览摘要规则、时间轴写入规则和 AI 可读规则。
+- 第二优先级是项目基础配置，包括项目名、封面、状态、默认提醒渠道和敏感信息策略。
+- 第三优先级才是具体业务设置，例如任务模板、提醒规则、账号资产、图册同步和 AI 自动化。
+
 ## 11. 溢出与内容安全
 
-近期已出现的问题：
+历史已出现过的问题：
 
 - AI 建议卡片里的“查看完整分析报告”和机器人使用绝对定位，导致超出卡片边界。
 
@@ -371,6 +389,7 @@
 - 卡片内装饰元素优先使用正常布局，不使用负值 absolute 定位。
 - 如果确实需要装饰元素贴边，父容器必须有明确尺寸和 `overflow-hidden`。
 - 文字按钮需要 `min-width: 0`，避免挤压时溢出。
+- AI 内容不应为了突出而脱离正常布局。第一阶段的 AI 建议应作为概览摘要、时间轴总结或管理页配置出现，不作为独立一级 tab。
 - 图标或插画需要 `shrink-0`，避免被压扁。
 
 推荐：

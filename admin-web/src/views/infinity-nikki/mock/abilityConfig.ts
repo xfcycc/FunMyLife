@@ -50,7 +50,7 @@ export const mockAbilityInstanceConfigs: AbilityInstanceConfig[] = [
         title: '即将结束活动',
         maxItems: 2,
         priority: 4,
-        filters: { activityStatuses: ['ending'], withinHours: 72 },
+        filters: { activityStatuses: ['ending', 'pending_archive'], withinHours: 72 },
         displayMode: 'list'
       },
       {
@@ -60,9 +60,42 @@ export const mockAbilityInstanceConfigs: AbilityInstanceConfig[] = [
         enabled: true,
         title: '最近时间轴',
         maxItems: 3,
-        priority: 5,
+        priority: 8,
         filters: {},
         displayMode: 'timeline'
+      },
+      {
+        id: 'sum-material-progress',
+        projectId: 'nikki-001',
+        source: 'materials',
+        enabled: true,
+        title: '素材收集',
+        maxItems: 3,
+        priority: 5,
+        filters: {},
+        displayMode: 'compact'
+      },
+      {
+        id: 'sum-gallery-recent',
+        projectId: 'nikki-001',
+        source: 'gallery',
+        enabled: true,
+        title: '图册记录',
+        maxItems: 3,
+        priority: 6,
+        filters: {},
+        displayMode: 'compact'
+      },
+      {
+        id: 'sum-asset-risk',
+        projectId: 'nikki-001',
+        source: 'assets',
+        enabled: true,
+        title: '资产风险',
+        maxItems: 2,
+        priority: 7,
+        filters: {},
+        displayMode: 'metric'
       }
     ]
   },
@@ -119,16 +152,83 @@ export const mockAbilityInstanceConfigs: AbilityInstanceConfig[] = [
     }
   },
   {
+    id: 'cfg-materials',
+    projectId: 'nikki-001',
+    blockKey: 'materials',
+    displayName: '素材收集',
+    enabled: true,
+    navigation: { visible: false, order: 4 },
+    summaryRules: [],
+    fields: [
+      { key: 'name', label: '素材/套装名称', type: 'text', required: true },
+      { key: 'type', label: '收集类型', type: 'select', required: true, options: ['套装', '素材', '代币', '收集项'] },
+      { key: 'progress', label: '收集进度', type: 'progress', required: true }
+    ],
+    timeline: {
+      enabled: true,
+      defaultWriteRule: { mode: 'detail', displayInOverview: true, aiReadable: true }
+    }
+  },
+  {
+    id: 'cfg-gallery',
+    projectId: 'nikki-001',
+    blockKey: 'gallery',
+    displayName: '图册',
+    enabled: true,
+    navigation: { visible: true, order: 4 },
+    summaryRules: [],
+    fields: [
+      { key: 'albumId', label: '所属图册', type: 'select', required: true },
+      { key: 'caption', label: '图片说明', type: 'text' },
+      { key: 'takenAt', label: '拍摄时间', type: 'date' }
+    ],
+    timeline: {
+      enabled: true,
+      defaultWriteRule: { mode: 'detail', displayInOverview: true, aiReadable: true }
+    }
+  },
+  {
+    id: 'cfg-assets',
+    projectId: 'nikki-001',
+    blockKey: 'assets',
+    displayName: '账号资产',
+    enabled: true,
+    navigation: { visible: true, order: 6 },
+    summaryRules: [],
+    fields: [
+      { key: 'name', label: '资产名称', type: 'text', required: true },
+      { key: 'type', label: '资产类型', type: 'select', required: true, options: ['官方账号', '辅助账号', 'Switch 账号', '支付凭证', '兑换码'] },
+      { key: 'status', label: '安全状态', type: 'select', required: true, options: ['已保护', '已绑定', '待处理', '已过期'] }
+    ],
+    timeline: {
+      enabled: true,
+      defaultWriteRule: { mode: 'exception_only', displayInOverview: false, aiReadable: false }
+    }
+  },
+  {
     id: 'cfg-timeline',
     projectId: 'nikki-001',
     blockKey: 'timeline',
     displayName: '时间轴',
     enabled: true,
-    navigation: { visible: true, order: 7 },
+    navigation: { visible: true, order: 5 },
     summaryRules: [],
     timeline: {
       enabled: true,
       defaultWriteRule: { mode: 'detail', displayInOverview: true, aiReadable: true }
+    }
+  },
+  {
+    id: 'cfg-ai',
+    projectId: 'nikki-001',
+    blockKey: 'ai',
+    displayName: 'AI 助手',
+    enabled: true,
+    navigation: { visible: false, order: 99 },
+    summaryRules: [],
+    timeline: {
+      enabled: true,
+      defaultWriteRule: { mode: 'exception_only', displayInOverview: true, aiReadable: true }
     }
   }
 ];

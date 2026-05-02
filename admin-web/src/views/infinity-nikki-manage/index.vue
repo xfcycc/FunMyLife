@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import LifeGeminiCard from '@/components/life-manager/LifeGeminiCard.vue';
 import LifeGeminiProjectHero from '@/components/life-manager/LifeGeminiProjectHero.vue';
 import LifeGeminiShell from '@/components/life-manager/LifeGeminiShell.vue';
@@ -10,6 +10,8 @@ import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
 import type { LifeGeminiProjectStat, LifeGeminiProjectTag } from '@/components/life-manager/types';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
 import { useRouterPush } from '@/hooks/common/router';
+import { fetchAbilityInstanceConfigs, saveAbilityInstanceConfigs } from '../infinity-nikki/service';
+import type { AbilityBlockKey, AbilityInstanceConfig, OverviewSummaryRule, TimelineWriteRule } from '../infinity-nikki/types';
 
 defineOptions({
   name: 'InfinityNikkiManage'
@@ -75,6 +77,8 @@ const syncRunning = ref(false);
 const modalShow = ref(false);
 const modalTitle = ref('新建配置');
 const modalDescription = ref('当前为演示配置流程，后续可接入真实表单与接口。');
+const abilityConfigs = ref<AbilityInstanceConfig[]>([]);
+const selectedAbilityId = ref('');
 
 const tabs = ['基础信息', '日常模板', '提醒规则', '资产关联', '图册同步', 'AI 设置'] satisfies TabLabel[];
 
@@ -189,12 +193,39 @@ const integrations = ref<IntegrationItem[]>([
   { name: 'Webhook', icon: 'material-symbols:extension-outline-rounded', tone: 'pink', status: '已连接' }
 ]);
 
+const blockToneMap: Record<AbilityBlockKey, Tone> = {
+  overview: 'indigo',
+  targets: 'orange',
+  version_activity: 'rose',
+  materials: 'emerald',
+  gallery: 'blue',
+  assets: 'amber',
+  timeline: 'purple',
+  ai: 'slate'
+};
+
+const timelineModeLabelMap: Record<TimelineWriteRule['mode'], string> = {
+  none: '不写入',
+  detail: '详细记录',
+  daily_summary: '每日汇总',
+  weekly_summary: '每周汇总',
+  exception_only: '只记异常'
+};
+
+const enabledAbilityConfigs = computed(() => abilityConfigs.value.filter(config => config.enabled));
+const visibleAbilityConfigs = computed(() => abilityConfigs.value.filter(config => config.enabled && config.navigation.visible));
+const overviewConfig = computed(() => abilityConfigs.value.find(config => config.blockKey === 'overview'));
+const overviewRules = computed<OverviewSummaryRule[]>(() => overviewConfig.value?.summaryRules ?? []);
+const selectedAbilityConfig = computed(() => {
+  return abilityConfigs.value.find(config => config.id === selectedAbilityId.value) ?? abilityConfigs.value[0];
+});
+
 const stats = computed<StatItem[]>(() => [
-  { label: '任务模板', value: String(dailyTasks.value.length + 8), icon: 'material-symbols:check-box-outline-rounded', tone: 'orange' },
+  { label: '功能块', value: String(enabledAbilityConfigs.value.length || dailyTasks.value.length + 8), icon: 'material-symbols:widgets-outline-rounded', tone: 'orange' },
   { label: '提醒规则', value: String(reminders.value.length + 4), icon: 'material-symbols:timer-outline-rounded', tone: 'rose' },
   { label: '关联资产', value: String(assets.value.length), icon: 'material-symbols:paid-outline-rounded', tone: 'amber' },
   { label: '图册数量', value: '5', icon: 'material-symbols:photo-library-outline-rounded', tone: 'emerald' },
-  { label: 'AI 任务', value: String(aiSettings.value.filter(item => item.active).length - 1), icon: 'material-symbols:auto-awesome-outline-rounded', tone: 'purple' }
+  { label: '概览规则', value: String(overviewRules.value.length || aiSettings.value.filter(item => item.active).length - 1), icon: 'material-symbols:auto-awesome-outline-rounded', tone: 'purple' }
 ]);
 
 const projectHeroStats = computed<LifeGeminiProjectStat[]>(() => [
@@ -221,6 +252,36 @@ function toggleAi(setting: AiSetting) {
   info(setting.active ? 'AI 自动化已开启' : 'AI 自动化已关闭', setting.title);
 }
 
+async function persistAbilityConfigState(message: string, detail: string) {
+  const res = await saveAbilityInstanceConfigs(abilityConfigs.value);
+  abilityConfigs.value = res.data;
+  success(message, detail);
+}
+
+async function toggleAbility(config: AbilityInstanceConfig) {
+  config.enabled = !config.enabled;
+  await persistAbilityConfigState(config.enabled ? '功能块已启用' : '功能块已停用', config.displayName);
+}
+
+async function toggleAbilityNavigation(config: AbilityInstanceConfig) {
+  config.navigation.visible = !config.navigation.visible;
+  await persistAbilityConfigState(config.navigation.visible ? '已显示在项目导航' : '已从项目导航隐藏', config.displayName);
+}
+
+async function toggleAbilityTimeline(config: AbilityInstanceConfig) {
+  if (!config.timeline) {
+    return;
+  }
+
+  config.timeline.enabled = !config.timeline.enabled;
+  await persistAbilityConfigState(config.timeline.enabled ? '时间轴写入已开启' : '时间轴写入已关闭', config.displayName);
+}
+
+async function toggleSummaryRule(rule: OverviewSummaryRule) {
+  rule.enabled = !rule.enabled;
+  await persistAbilityConfigState(rule.enabled ? '概览规则已启用' : '概览规则已停用', rule.title);
+}
+
 function openDemoModal(title: string, description = '当前为演示配置流程，后续可接入真实表单与接口。') {
   modalTitle.value = title;
   modalDescription.value = description;
@@ -240,8 +301,8 @@ function runSync() {
   }, 600);
 }
 
-function saveConfig() {
-  success('配置已保存', `已保存 ${dailyTasks.value.length} 个模板和 ${reminders.value.length} 条提醒规则`);
+async function saveConfig() {
+  await persistAbilityConfigState('配置已保存', `已保存 ${abilityConfigs.value.length} 个功能块实例和 ${overviewRules.value.length} 条概览规则`);
 }
 
 function resetConfig() {
@@ -254,6 +315,12 @@ function resetConfig() {
   });
   success('配置已恢复默认值', '无限暖暖项目配置已回到演示初始状态');
 }
+
+onMounted(async () => {
+  const res = await fetchAbilityInstanceConfigs();
+  abilityConfigs.value = res.data;
+  selectedAbilityId.value = res.data[0]?.id ?? '';
+});
 </script>
 
 <template>
@@ -303,6 +370,97 @@ function resetConfig() {
       </LifeGeminiProjectHero>
 
       <LifeGeminiTabs v-model="activeTab" :tabs="tabs" />
+
+      <section class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+        <LifeGeminiCard title="功能块实例配置" :action-text="`${visibleAbilityConfigs.length} 个显示在项目导航`">
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div
+              v-for="config in abilityConfigs"
+              :key="config.id"
+              class="rounded-xl border border-slate-100 bg-white p-4 text-left transition-colors hover:bg-slate-50"
+              :class="{ 'border-indigo-100 bg-indigo-50/40': selectedAbilityConfig?.id === config.id }"
+              role="button"
+              tabindex="0"
+              @click="selectedAbilityId = config.id"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex min-w-0 items-start gap-3">
+                  <span class="tone-icon" :class="blockToneMap[config.blockKey]">
+                    <SvgIcon icon="material-symbols:widgets-outline-rounded" />
+                  </span>
+                  <span class="min-w-0">
+                    <strong class="block truncate text-sm text-slate-800">{{ config.displayName }}</strong>
+                    <small class="mt-1 block text-xs text-slate-500">
+                      {{ config.navigation.visible ? `导航第 ${config.navigation.order} 位` : '不显示在项目导航' }}
+                    </small>
+                  </span>
+                </div>
+                <em class="shrink-0 rounded-full px-2 py-0.5 text-[10px]" :class="config.enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'">
+                  {{ config.enabled ? '启用' : '停用' }}
+                </em>
+              </div>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button class="text-action" type="button" @click.stop="toggleAbility(config)">
+                  {{ config.enabled ? '停用' : '启用' }}
+                </button>
+                <button class="text-action" type="button" @click.stop="toggleAbilityNavigation(config)">
+                  {{ config.navigation.visible ? '隐藏导航' : '显示导航' }}
+                </button>
+                <button v-if="config.timeline" class="text-action" type="button" @click.stop="toggleAbilityTimeline(config)">
+                  {{ config.timeline.enabled ? '关闭时间轴' : '开启时间轴' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </LifeGeminiCard>
+
+        <div class="grid gap-5">
+          <LifeGeminiCard :title="selectedAbilityConfig ? `${selectedAbilityConfig.displayName}规则` : '功能块规则'">
+            <div v-if="selectedAbilityConfig" class="space-y-3 text-xs">
+              <div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                <span class="text-slate-500">字段配置</span>
+                <span class="font-medium text-slate-700">{{ selectedAbilityConfig.fields?.length ?? 0 }} 个字段</span>
+              </div>
+              <div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                <span class="text-slate-500">概览规则</span>
+                <span class="font-medium text-slate-700">{{ selectedAbilityConfig.summaryRules.length }} 条</span>
+              </div>
+              <div class="rounded-xl bg-slate-50 px-3 py-2">
+                <span class="text-slate-500">时间轴策略</span>
+                <p class="mt-1 font-medium text-slate-700">
+                  {{ selectedAbilityConfig.timeline ? timelineModeLabelMap[selectedAbilityConfig.timeline.defaultWriteRule.mode] : '未接入时间轴' }}
+                </p>
+              </div>
+              <div class="rounded-xl bg-slate-50 px-3 py-2">
+                <span class="text-slate-500">行为规则</span>
+                <p class="mt-1 font-medium text-slate-700">
+                  重置 {{ selectedAbilityConfig.behavior?.resetRules?.length ?? 0 }} 条 · 提醒 {{ selectedAbilityConfig.behavior?.reminderRules?.length ?? 0 }} 条
+                </p>
+              </div>
+            </div>
+          </LifeGeminiCard>
+
+          <LifeGeminiCard title="概览摘要规则">
+            <div class="space-y-2">
+              <button
+                v-for="rule in overviewRules"
+                :key="rule.id"
+                class="flex w-full items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2 text-left"
+                type="button"
+                @click="toggleSummaryRule(rule)"
+              >
+                <span class="min-w-0">
+                  <strong class="block truncate text-xs text-slate-700">{{ rule.title }}</strong>
+                  <small class="text-[10px] text-slate-400">{{ rule.source }} · 最多 {{ rule.maxItems }} 条 · 优先级 {{ rule.priority }}</small>
+                </span>
+                <em class="shrink-0 rounded-full px-2 py-0.5 text-[10px]" :class="rule.enabled ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'">
+                  {{ rule.enabled ? '显示' : '隐藏' }}
+                </em>
+              </button>
+            </div>
+          </LifeGeminiCard>
+        </div>
+      </section>
 
       <section class="top-grid">
         <LifeGeminiCard class="config-card basic-card" title="基本信息">

@@ -1,481 +1,196 @@
-# 无限暖暖项目详情页 - 接口文档
+# 无限暖暖项目详情页接口文档
 
-## 概述
+本文档描述 `/life/project/infinity-nikki` 与 `/life/project/infinity-nikki/manage` 当前页面所需的接口口径。当前前端仍使用 mock 数据，真实后端接入时应以这里的新模型为准，不再沿用旧的 `daily-tasks`、`countdown`、`notes tab`、`ai tab` 拆法。
 
-本文档定义无限暖暖项目详情页（`/life/project/infinity-nikki`）所需的全部 API 接口。当前所有接口使用 mock 数据，后续替换为真实后端 API。
+Base URL：`/api/life/projects/{projectId}`
 
-**Base URL**: `/api/life/project/infinity-nikki`
+通用响应：
 
-**通用响应格式**:
-```typescript
+```ts
 interface ApiResponse<T> {
-  code: number;      // 200 成功
-  message: string;   // 响应消息
-  data: T;           // 响应数据
+  code: number;
+  message: string;
+  data: T;
 }
 ```
 
----
-
-## 1. 项目基础信息
-
-### 1.1 获取项目信息
-
-**接口**: `GET /api/life/project/infinity-nikki/project`
-
-**响应字段**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 项目 ID |
-| name | string | 项目名称 |
-| description | string | 项目简介 |
-| coverSrc | string | 封面图片 URL |
-| coverAlt | string | 封面图片替代文本 |
-| status | `'active' \| 'paused' \| 'archived'` | 项目状态 |
-| createdAt | string | 创建时间 (ISO 8601) |
-| tags | NikkiProjectTag[] | 项目标签 |
-| stats | NikkiProjectStat[] | 项目统计数据 |
-
-**NikkiProjectTag**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| label | string | 标签文本 |
-| tone | `'default' \| 'success'` | 标签样式（可选） |
-
-**NikkiProjectStat**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| label | string | 统计项名称 |
-| value | `number \| string` | 统计值 |
-
-**示例响应**:
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "id": "nikki-001",
-    "name": "无限暖暖",
-    "description": "收集美好的瞬间，搭配无限的可能",
-    "coverSrc": "https://...",
-    "coverAlt": "Infinity Nikki",
-    "status": "active",
-    "createdAt": "2024-12-15",
-    "tags": [
-      { "label": "游戏" },
-      { "label": "进行中", "tone": "success" }
-    ],
-    "stats": [
-      { "label": "创建时间", "value": "2024-12-15" },
-      { "label": "今日任务进度", "value": "5/8" },
-      { "label": "本周完成率", "value": "62%" },
-      { "label": "项目笔记", "value": "12" },
-      { "label": "图册数量", "value": "8" }
-    ]
-  }
-}
-```
-
----
-
-## 2. 日常任务
+## 1. 项目与功能块配置
 
-### 2.1 获取日常任务概览
+项目详情页的 tab 来自功能块实例配置，而不是页面硬编码。
 
-**接口**: `GET /api/life/project/infinity-nikki/daily-tasks`
+`GET /api/life/projects/{projectId}`
 
-**响应字段**:
+返回项目基础信息：名称、描述、封面、状态、标签、统计数据。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| completed | number | 已完成任务数 |
-| total | number | 总任务数 |
-| taskGroups | TaskGroup[] | 任务分组列表 |
-| weeklyGoals | WeeklyGoal[] | 周常目标列表 |
+`GET /api/life/projects/{projectId}/ability-configs`
 
-**TaskGroup**:
+返回 `AbilityInstanceConfig[]`。核心字段包括：
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| type | `'daily' \| 'weekly' \| 'event'` | 分组类型 |
-| label | string | 分组名称 |
-| tasks | DailyTask[] | 任务列表 |
+| 字段 | 说明 |
+| --- | --- |
+| `blockKey` | 功能块类型，如 `overview`、`targets`、`version_activity`、`materials`、`gallery`、`assets`、`timeline`、`ai` |
+| `displayName` | 项目内显示名称 |
+| `enabled` | 是否启用 |
+| `navigation.visible` | 是否显示为项目详情页 tab |
+| `navigation.order` | tab 顺序 |
+| `summaryRules` | 概览摘要规则 |
+| `fields` | 当前功能块实例的字段配置 |
+| `behavior` | 重置、提醒、归档等行为规则 |
+| `timeline` | 是否写入时间轴及默认写入策略 |
 
-**DailyTask**:
+`PATCH /api/life/projects/{projectId}/ability-configs/{configId}`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 任务 ID |
-| text | string | 任务文本 |
-| done | boolean | 是否完成 |
-| detail | string (可选) | 进度详情，如 "25/50" |
-| group | `'daily' \| 'weekly' \| 'event'` | 所属分组 |
+用于项目管理页修改功能块实例配置。第一阶段至少支持启停、导航显示、导航顺序、时间轴写入策略和概览摘要规则启停。
 
-**WeeklyGoal**:
+`PATCH /api/life/projects/{projectId}/ability-configs`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 目标 ID |
-| text | string | 目标文本 |
-| current | number | 当前进度值 |
-| max | number | 目标值 |
-| progress | number | 进度百分比 (0-100) |
-| status | `'on_track' \| 'needs_attention' \| 'completed'` | 状态 |
-| color | string | 进度条颜色 class |
+批量保存功能块实例配置。项目管理页通常一次调整多个功能块的启停、导航顺序、概览规则和时间轴规则，因此后端需要支持按项目整体保存，避免前端逐条提交后出现中间态。
 
-### 2.2 切换任务完成状态
+## 2. 概览摘要
 
-**接口**: `POST /api/life/project/infinity-nikki/daily-tasks/toggle`
+`GET /api/life/projects/{projectId}/overview-summaries`
 
-**请求参数**:
+返回 `OverviewSummary[]`，由 `overview` 功能块中的 `summaryRules` 生成。无限暖暖当前默认摘要包括当前版本、今日目标、本周目标、即将结束活动、素材收集、图册记录、资产风险和最近时间轴。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 任务 ID |
-| done | boolean | 目标完成状态 |
+概览只负责摘要、跳转和 AI 建议，不直接承担完整数据管理。用户要新增或管理数据，应进入对应 tab。
 
-**响应字段**:
+## 3. 任务目标
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 任务 ID |
-| done | boolean | 更新后的完成状态 |
+`GET /api/life/projects/{projectId}/targets`
 
-### 2.3 更新周常目标进度
+返回 `GameTarget[]`。任务目标覆盖日常、周常、版本活动目标和用户自定义目标。
 
-**接口**: `POST /api/life/project/infinity-nikki/weekly-goals/progress`
+关键字段：
 
-**请求参数**:
+| 字段 | 说明 |
+| --- | --- |
+| `type` | `daily`、`weekly`、`activity`、`custom` |
+| `status` | `todo`、`done`、`skipped`、`expired`、`archived` |
+| `progressCurrent/progressTarget` | 进度型目标 |
+| `versionId/activityId` | 版本活动目标的归属 |
+| `resetRule` | 重置规则 |
+| `pinnedToOverview` | 是否进入概览候选 |
+| `timelineRule` | 完成、跳过、过期等动作如何写入时间轴 |
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 目标 ID |
-| current | number | 新的当前值 |
+`POST /api/life/projects/{projectId}/targets`
 
-**响应字段**:
+新增目标。活动目标应带 `activityId`，后端需同步维护活动的 `targetIds`。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 目标 ID |
-| current | number | 更新后的当前值 |
+`PATCH /api/life/projects/{projectId}/targets/{targetId}`
 
-### 2.4 切换周常目标状态
+编辑目标基础信息，例如标题、说明、类型、进度目标、归属版本、归属活动、是否置顶到概览和时间轴写入规则。
 
-**接口**: `POST /api/life/project/infinity-nikki/weekly-goals/status`
+`PATCH /api/life/projects/{projectId}/targets/{targetId}/status`
 
-**请求参数**:
+更新目标状态。完成、跳过、过期、归档动作需要按 `timelineRule` 生成时间轴事件。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 目标 ID |
-| status | `'on_track' \| 'needs_attention' \| 'completed'` | 目标状态 |
+`PATCH /api/life/projects/{projectId}/targets/{targetId}/progress`
 
-**响应字段**:
+更新目标进度。达到目标值时可自动变为 `done`。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 目标 ID |
-| status | string | 更新后的状态 |
+`DELETE /api/life/projects/{projectId}/targets/{targetId}`
 
----
+删除目标。第一阶段可直接删除 mock 数据；真实后端建议保留审计记录，并在删除活动目标时同步维护活动的 `targetIds`。
 
-## 3. 倒计时
+## 4. 版本与活动
 
-### 3.1 获取倒计时概览
+`GET /api/life/projects/{projectId}/game-versions`
 
-**接口**: `GET /api/life/project/infinity-nikki/countdown`
+返回 `GameVersion[]`。版本状态为 `upcoming`、`active`、`ending`、`ended`、`archived`。
 
-**响应字段**:
+`GET /api/life/projects/{projectId}/game-activities`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| events | EventCountdown[] | 活动倒计时列表 |
-| versionNodes | VersionNode[] | 版本节点列表 |
+返回 `GameActivity[]`。活动状态为 `upcoming`、`active`、`ending`、`ended`、`pending_archive`、`archived`。
 
-**EventCountdown**:
+`POST /api/life/projects/{projectId}/game-versions`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 活动 ID |
-| title | string | 活动标题 |
-| description | string (可选) | 活动描述 |
-| endTime | string | 结束时间 |
-| remainingDays | number | 剩余天数 |
-| img | string | 活动图片 URL |
-| reminded | boolean | 是否已设置提醒 |
-| checkedIn | boolean | 是否已打卡 |
+新增版本。
 
-**VersionNode**:
+`POST /api/life/projects/{projectId}/game-activities`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 节点 ID |
-| type | `'live' \| 'maintenance' \| 'update'` | 节点类型 |
-| title | string | 节点标题 |
-| startTime | string | 开始时间 |
-| endTime | string (可选) | 结束时间 |
-| daysUntil | number | 距离开始天数 |
-| reminded | boolean | 是否已设置提醒 |
-| checkedIn | boolean | 是否已打卡 |
+新增版本活动。
 
-### 3.2 设置/取消活动提醒
+`PATCH /api/life/projects/{projectId}/game-activities/{activityId}/reminder`
 
-**接口**: `POST /api/life/project/infinity-nikki/events/reminder`
+启停活动提醒。
 
-**请求参数**:
+`POST /api/life/projects/{projectId}/game-activities/{activityId}/archive`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 活动 ID |
-| reminded | boolean | 目标提醒状态 |
+归档活动，并生成 `activity_archived` 时间轴事件。归档摘要应包含关联目标、截图、笔记、素材。
 
-### 3.3 活动打卡/撤回
+`POST /api/life/projects/{projectId}/game-versions/{versionId}/archive`
 
-**接口**: `POST /api/life/project/infinity-nikki/events/checkin`
+归档版本，并生成 `version_archived` 时间轴事件。版本归档会同步归档版本下活动和目标。
 
-**请求参数**:
+## 5. 时间轴
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 活动 ID |
-| checkedIn | boolean | 目标打卡状态 |
+`GET /api/life/projects/{projectId}/timeline-events`
 
-### 3.4 设置/取消版本节点提醒
+返回 `TimelineEvent[]`。时间轴是长期项目回顾的主数据，不只是动态列表。
 
-**接口**: `POST /api/life/project/infinity-nikki/version-nodes/reminder`
+关键字段：
 
-**请求参数**:
+| 字段 | 说明 |
+| --- | --- |
+| `type` | `target_done`、`target_skipped`、`target_expired`、`activity_started`、`activity_archived`、`version_archived`、`material_completed`、`photo_uploaded`、`note_created`、`ai_summary_generated` |
+| `sourceBlockKey` | 来源功能块 |
+| `versionId/activityId/targetId` | 可选关联 |
+| `displayInOverview` | 是否进入概览摘要 |
+| `aiReadable` | 是否允许 AI 读取 |
+| `sensitivity` | 普通或私密 |
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 节点 ID |
-| reminded | boolean | 目标提醒状态 |
+`POST /api/life/projects/{projectId}/timeline-events`
 
-### 3.5 版本节点打卡/撤回
+新增时间轴记录。页面需支持按天、按周、按版本查看。
 
-**接口**: `POST /api/life/project/infinity-nikki/version-nodes/checkin`
+## 6. 素材、图册与资产
 
-**请求参数**:
+`GET /api/life/projects/{projectId}/materials`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 节点 ID |
-| checkedIn | boolean | 目标打卡状态 |
+返回素材/套装/代币/收集项概览。素材能力默认不一定显示为 tab，但会进入概览摘要、活动归档和 AI 复盘。
 
----
+`GET /api/life/projects/{projectId}/gallery`
 
-## 4. 资产
+返回图册和照片。照片应支持 `versionId`、`activityId`、`targetId` 关联，并可按图册配置写入时间轴。
 
-### 4.1 获取资产概览
+`POST /api/life/projects/{projectId}/gallery/photos`
 
-**接口**: `GET /api/life/project/infinity-nikki/assets`
+新增照片。
 
-**响应字段**:
+`PATCH /api/life/projects/{projectId}/gallery/photos/{photoId}`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| total | number | 资产总数 |
-| assets | NikkiAsset[] | 资产列表 |
+编辑照片说明、所属图册、图片地址、关联版本、关联活动和关联目标。
 
-**NikkiAsset**:
+`DELETE /api/life/projects/{projectId}/gallery/photos/{photoId}`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 资产 ID |
-| name | string | 资产名称 |
-| type | `'official_account' \| 'sub_account' \| 'switch_account' \| 'payment' \| 'redeem_code'` | 资产类型 |
-| status | `'protected' \| 'bound' \| 'pending' \| 'expired'` | 安全状态 |
-| statusLabel | string | 状态显示文本 |
-| description | string (可选) | 资产描述 |
+删除照片。真实后端需要区分删除业务记录和删除 OSS 文件，默认不应直接清理原始文件。
 
-### 4.2 获取资产详情
+`GET /api/life/projects/{projectId}/assets`
 
-**接口**: `GET /api/life/project/infinity-nikki/assets/:id`
+返回账号资产。资产状态包括 `protected`、`bound`、`pending`、`expired`、`archived`。
 
-**路径参数**: `id` - 资产 ID
+`POST /api/life/projects/{projectId}/assets`
 
-**响应**: 单个 `NikkiAsset` 对象
+新增资产。
 
----
+`PATCH /api/life/projects/{projectId}/assets/{assetId}`
 
-## 5. 笔记
+编辑资产名称、类型、状态、摘要、关联链接和备注。敏感字段后续应独立加密和授权查看。
 
-### 5.1 获取笔记概览
+`PATCH /api/life/projects/{projectId}/assets/{assetId}/status`
 
-**接口**: `GET /api/life/project/infinity-nikki/notes`
+更新资产状态。敏感资产内容后续需要增加查看确认和权限控制。
 
-**响应字段**:
+`DELETE /api/life/projects/{projectId}/assets/{assetId}`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| total | number | 笔记总数 |
-| notes | NikkiNote[] | 笔记列表 |
-
-**NikkiNote**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 笔记 ID |
-| title | string | 笔记标题 |
-| category | `'strategy' \| 'explore' \| 'coordination' \| 'material' \| 'story'` | 分类 |
-| categoryLabel | string | 分类显示文本 |
-| content | string (可选) | 笔记内容摘要 |
-| createdAt | string | 创建时间 |
-| updatedAt | string | 更新时间 |
-| relativeTime | string | 相对时间显示 |
-
-### 5.2 获取笔记详情
-
-**接口**: `GET /api/life/project/infinity-nikki/notes/:id`
-
-**路径参数**: `id` - 笔记 ID
-
-**响应**: 单个 `NikkiNote` 对象
-
----
-
-## 6. 图册
-
-### 6.1 获取图册概览
-
-**接口**: `GET /api/life/project/infinity-nikki/gallery`
-
-**响应字段**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| albumCount | number | 图册总数 |
-| photoCount | number | 照片总数 |
-| albums | NikkiAlbum[] | 图册列表 |
-| recentPhotos | NikkiPhoto[] | 最近照片列表 |
-
-**NikkiAlbum**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 图册 ID |
-| name | string | 图册名称 |
-| coverUrl | string | 封面图片 URL |
-| photoCount | number | 照片数量 |
-
-**NikkiPhoto**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 照片 ID |
-| albumId | string | 所属图册 ID |
-| url | string | 原图 URL |
-| thumbnail | string | 缩略图 URL |
-| caption | string (可选) | 照片说明 |
-| takenAt | string | 拍摄时间 |
-
----
+删除资产。真实后端建议默认软删除，避免误删账号、兑换码、支付凭证等重要资料。
 
 ## 7. AI 建议
 
-### 7.1 获取 AI 建议
+`GET /api/life/projects/{projectId}/ai/overview`
 
-**接口**: `GET /api/life/project/infinity-nikki/ai`
+返回基于目标、活动、素材、时间轴生成的 AI 建议。AI 不作为独立 tab，而是作为概览建议、时间轴摘要和项目管理自动化配置出现。
 
-**响应字段**:
+`POST /api/life/projects/{projectId}/ai/summaries`
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| currentSuggestion | AiSuggestion | 当前建议 |
-| suggestionCount | number | 建议总数 |
-
-**AiSuggestion**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 建议 ID |
-| content | string | 建议内容 |
-| highlights | AiHighlight[] | 重点建议列表 |
-| generatedAt | string | 生成时间 |
-| status | `'generated' \| 'generating' \| 'pending' \| 'failed'` | 状态 |
-
-**AiHighlight**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| text | string | 建议文本 |
-| type | `'danger' \| 'info' \| 'success' \| 'warning'` | 建议类型 |
-
-### 7.2 刷新 AI 建议
-
-**接口**: `POST /api/life/project/infinity-nikki/ai/refresh`
-
-**响应**: 同 7.1
-
----
-
-## 8. 最近动态
-
-### 8.1 获取最近动态
-
-**接口**: `GET /api/life/project/infinity-nikki/activities`
-
-**响应字段**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| (数组) | NikkiActivity[] | 动态列表 |
-
-**NikkiActivity**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | string | 动态 ID |
-| type | `'task_complete' \| 'note_added' \| 'screenshot_uploaded' \| 'event_progress' \| 'version_announcement'` | 动态类型 |
-| title | string | 动态标题 |
-| description | string | 动态描述 |
-| icon | string | 图标名称 (lucide) |
-| iconColor | string | 图标颜色 class |
-| bg | string | 背景颜色 class |
-| time | string | 相对时间显示 |
-| createdAt | string | 创建时间 |
-
----
-
-## 9. 快速记录
-
-### 9.1 创建快速记录
-
-**接口**: `POST /api/life/project/infinity-nikki/quick-record`
-
-**请求参数**:
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| content | string | 记录内容（必填，最长 500 字） |
-
-**响应**: `null`（成功即返回）
-
----
-
-## 接口汇总
-
-| 方法 | 接口路径 | 说明 |
-|------|----------|------|
-| GET | `/project` | 获取项目基础信息 |
-| GET | `/daily-tasks` | 获取日常任务概览 |
-| POST | `/daily-tasks/toggle` | 切换任务完成状态 |
-| POST | `/weekly-goals/progress` | 更新周常目标进度 |
-| POST | `/weekly-goals/status` | 切换周常目标状态 |
-| GET | `/countdown` | 获取倒计时概览 |
-| POST | `/events/reminder` | 设置/取消活动提醒 |
-| POST | `/events/checkin` | 活动打卡/撤回 |
-| POST | `/version-nodes/reminder` | 设置/取消版本节点提醒 |
-| POST | `/version-nodes/checkin` | 版本节点打卡/撤回 |
-| GET | `/assets` | 获取资产概览 |
-| GET | `/assets/:id` | 获取资产详情 |
-| GET | `/notes` | 获取笔记概览 |
-| GET | `/notes/:id` | 获取笔记详情 |
-| GET | `/gallery` | 获取图册概览 |
-| GET | `/ai` | 获取 AI 建议 |
-| POST | `/ai/refresh` | 刷新 AI 建议 |
-| GET | `/activities` | 获取最近动态 |
-| POST | `/quick-record` | 创建快速记录 |
+生成 AI 总结。用户确认后写入 `ai_summary_generated` 时间轴事件。

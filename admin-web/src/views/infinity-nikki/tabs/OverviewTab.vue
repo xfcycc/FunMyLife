@@ -1,181 +1,177 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { BookOpen, Camera, CheckCircle2, ChevronRight, Circle, Clock, Map, MoreVertical, PenSquare, ShieldCheck, Star } from 'lucide-vue-next';
+import {
+  BookOpen,
+  CalendarDays,
+  Camera,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  History,
+  PackageCheck,
+  ListChecks,
+  RefreshCw,
+  ShieldCheck,
+  Star
+} from 'lucide-vue-next';
 import LifeGeminiCard from '@/components/life-manager/LifeGeminiCard.vue';
-import type { AiOverview, AssetOverview, CountdownOverview, DailyTaskOverview, GalleryOverview, NikkiActivity, NoteOverview } from '../types';
+import type {
+  AiOverview,
+  AssetOverview,
+  GalleryOverview,
+  MaterialOverview,
+  NoteOverview,
+  OverviewSummary,
+  TimelineEvent,
+  TimelineEventType
+} from '../types';
 
 defineOptions({ name: 'OverviewTab' });
 
 const props = defineProps<{
-  dailyData: DailyTaskOverview;
-  weeklyGoals: DailyTaskOverview['weeklyGoals'];
-  countdownData: CountdownOverview;
   assetData: AssetOverview;
   noteData: NoteOverview;
   galleryData: GalleryOverview;
+  materialData: MaterialOverview;
   aiData: AiOverview;
-  activities: NikkiActivity[];
+  timelineEvents: TimelineEvent[];
+  overviewSummaries: OverviewSummary[];
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   switchTab: [tab: string];
-  toggleTask: [id: string, done: boolean];
-  toggleVersionReminder: [id: string, reminded: boolean];
+  refreshAi: [];
   openDetail: [payload: { type: string; id: string }];
 }>();
 
-const iconMap: Record<string, typeof CheckCircle2> = {
-  CheckCircle2,
-  PenSquare,
-  Camera,
-  Map,
-  Star
+const summaryIconMap: Record<string, typeof CheckCircle2> = {
+  'sum-current-version': CalendarDays,
+  'sum-today-targets': CheckCircle2,
+  'sum-weekly-targets': ListChecks,
+  'sum-ending-activities': Clock,
+  'sum-material-progress': PackageCheck,
+  'sum-gallery-recent': Camera,
+  'sum-asset-risk': ShieldCheck,
+  'sum-recent-timeline': History
 };
 
-const radius = 36;
-const circumference = 2 * Math.PI * radius;
-const strokeDashoffset = computed(() => {
-  return circumference - (props.dailyData.completed / props.dailyData.total) * circumference;
+const summaryTabMap: Record<string, string> = {
+  targets: '任务',
+  version_activity: '活动与版本',
+  gallery: '图册',
+  assets: '账号资产',
+  timeline: '时间轴'
+};
+
+const statusLabelMap: Record<string, string> = {
+  active: '进行中',
+  ending: '即将结束',
+  todo: '待完成',
+  done: '已完成',
+  skipped: '已跳过',
+  expired: '已过期',
+  target_done: '目标完成',
+  note_created: '笔记',
+  photo_uploaded: '图册',
+  activity_started: '活动开始',
+  activity_archived: '活动归档',
+  version_archived: '版本归档',
+  local_note: '快速记录',
+  collecting: '收集中',
+  planning: '计划中',
+  completed: '已完成',
+  archived: '已归档',
+  protected: '已保护',
+  bound: '已绑定',
+  pending: '待处理'
+};
+
+const recentTimelineEvents = computed(() => {
+  return [...props.timelineEvents]
+    .sort((prev, next) => Date.parse(next.occurredAt) - Date.parse(prev.occurredAt))
+    .slice(0, 6);
 });
 
-const weeklyCompletedText = computed(() => {
-  const completed = props.weeklyGoals.filter(g => g.status === 'completed').length;
-  return `${completed}/${props.weeklyGoals.length} 已完成`;
-});
+function getSummaryIcon(ruleId: string) {
+  return summaryIconMap[ruleId] ?? Star;
+}
+
+function getSummaryItems(summary: OverviewSummary) {
+  return summary.items ?? [];
+}
+
+function getSummaryStatusLabel(status?: string) {
+  return status ? (statusLabelMap[status] ?? status) : '';
+}
+
+function getSummaryActionText(summary: OverviewSummary) {
+  return summary.targetRoute && summaryTabMap[summary.targetRoute] ? '查看' : undefined;
+}
+
+function handleSummaryAction(summary: OverviewSummary) {
+  const tab = summary.targetRoute ? summaryTabMap[summary.targetRoute] : undefined;
+  if (tab) {
+    emit('switchTab', tab);
+  }
+}
+
+function getTimelineIcon(type: TimelineEventType) {
+  const map: Partial<Record<TimelineEventType, typeof CheckCircle2>> = {
+    target_done: CheckCircle2,
+    target_skipped: CheckCircle2,
+    target_expired: Clock,
+    activity_started: Star,
+    activity_ending: Clock,
+    activity_archived: History,
+    version_archived: History,
+    material_completed: PackageCheck,
+    photo_uploaded: Camera,
+    note_created: BookOpen,
+    ai_summary_generated: RefreshCw
+  };
+  return map[type] ?? History;
+}
+
+function formatTimelineTime(value: string) {
+  return value.replace('T', ' ').slice(5, 16);
+}
 </script>
 
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-    <!-- 今日游戏日常 -->
-    <LifeGeminiCard title="今日游戏日常" action-text="查看全部" @action="$emit('switchTab', '日常')">
-      <div class="flex gap-4">
-        <div class="w-1/3 flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl py-4">
-          <div class="nikki-progress-ring">
-            <svg class="w-24 h-24">
-              <circle cx="48" cy="48" :r="radius" stroke="currentColor" stroke-width="6" fill="transparent" class="ring-track" />
-              <circle
-                cx="48"
-                cy="48"
-                :r="radius"
-                stroke="currentColor"
-                stroke-width="6"
-                fill="transparent"
-                :stroke-dasharray="circumference"
-                :stroke-dashoffset="strokeDashoffset"
-                class="ring-fill"
-              />
-            </svg>
-            <div class="ring-label">
-              <span class="text-xl font-bold text-slate-800">{{ dailyData.completed }}/{{ dailyData.total }}</span>
-              <span class="text-[10px] text-slate-400 mt-0.5">已完成</span>
-            </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+    <LifeGeminiCard
+      v-for="summary in overviewSummaries"
+      :key="summary.id"
+      :title="summary.title"
+      :action-text="getSummaryActionText(summary)"
+      @action="handleSummaryAction(summary)"
+    >
+      <div class="min-h-36 flex flex-col justify-between">
+        <div>
+          <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mb-4">
+            <component :is="getSummaryIcon(summary.ruleId)" :size="18" />
           </div>
+          <p class="text-2xl font-bold text-slate-800">{{ summary.value }}</p>
+          <p v-if="summary.description" class="mt-1 text-xs leading-5 text-slate-500">{{ summary.description }}</p>
         </div>
-        <div class="w-2/3 space-y-3">
+
+        <div v-if="getSummaryItems(summary).length" class="mt-4 space-y-2">
           <div
-            v-for="task in dailyData.taskGroups[0]?.tasks.slice(0, 6)"
-            :key="task.id"
-            class="nikki-task-item"
-            @click="$emit('toggleTask', task.id, !task.done)"
+            v-for="item in getSummaryItems(summary)"
+            :key="item.id"
+            class="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"
           >
-            <div class="flex items-center space-x-2">
-              <CheckCircle2 v-if="task.done" :size="16" class="text-indigo-500 shrink-0" />
-              <Circle v-else :size="16" class="text-slate-300 shrink-0" />
-              <span class="task-text" :class="[task.done ? 'text-slate-500' : 'text-slate-700']">{{ task.text }}</span>
-            </div>
-            <span v-if="task.detail" class="task-detail">{{ task.detail }}</span>
+            <span class="min-w-0 truncate text-xs text-slate-700">{{ item.label }}</span>
+            <span v-if="item.status" class="shrink-0 text-[10px] text-slate-400">{{ getSummaryStatusLabel(item.status) }}</span>
           </div>
         </div>
       </div>
     </LifeGeminiCard>
+  </div>
 
-    <!-- 本周任务 -->
-    <LifeGeminiCard title="本周任务" :action-text="weeklyCompletedText">
-      <div class="space-y-4">
-        <div v-for="goal in weeklyGoals.slice(0, 5)" :key="goal.id">
-          <div class="flex justify-between items-center mb-1.5">
-            <div class="flex items-center space-x-2">
-              <div
-                v-if="goal.status === 'completed'"
-                class="w-4 h-4 rounded-full bg-indigo-50 flex items-center justify-center"
-              >
-                <CheckCircle2 :size="12" class="text-indigo-500" />
-              </div>
-              <div v-else class="w-4 h-4 rounded-full bg-rose-50 flex items-center justify-center">
-                <span class="w-1.5 h-1.5 bg-rose-400 rounded-sm"></span>
-              </div>
-              <span class="text-xs" :class="[goal.status === 'completed' ? 'text-slate-600' : 'text-slate-800 font-medium']">
-                {{ goal.text }}
-              </span>
-            </div>
-            <span class="text-[10px] text-slate-400">{{ goal.current }}/{{ goal.max }}</span>
-          </div>
-          <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div class="h-full rounded-full" :class="[goal.color]" :style="{ width: `${goal.progress}%` }"></div>
-          </div>
-        </div>
-      </div>
-    </LifeGeminiCard>
-
-    <!-- 活动倒计时 -->
-    <LifeGeminiCard title="活动倒计时" action-text="查看全部" @action="$emit('switchTab', '倒计时')">
-      <div class="space-y-4">
-        <div
-          v-for="event in countdownData.events"
-          :key="event.id"
-          class="nikki-countdown-item"
-          @click="$emit('openDetail', { type: 'event', id: event.id })"
-        >
-          <div class="flex items-center space-x-3">
-            <img :src="event.img" alt="" class="w-12 h-12 rounded-lg object-cover shadow-sm" />
-            <div>
-              <p class="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{{ event.title }}</p>
-              <p class="text-[10px] text-slate-400 mt-0.5 flex items-center">
-                <Clock :size="10" class="mr-1" /> {{ event.endTime }} 结束
-              </p>
-            </div>
-          </div>
-          <div class="countdown-days">
-            <span class="text-2xl font-bold">{{ event.remainingDays }}</span>
-            <span class="text-xs">天</span>
-          </div>
-        </div>
-      </div>
-    </LifeGeminiCard>
-
-    <!-- 直播 / 版本更新 -->
-    <LifeGeminiCard title="直播 / 版本更新" action-text="查看全部" @action="$emit('switchTab', '倒计时')">
-      <div class="space-y-5">
-        <div
-          v-for="node in countdownData.versionNodes"
-          :key="node.id"
-          class="nikki-version-card" :class="[node.type === 'live' ? 'live' : 'maintenance']"
-        >
-          <div class="flex justify-between items-start mb-2">
-            <div>
-              <span class="version-tag" :class="[node.type === 'live' ? 'bg-rose-100 text-rose-500' : 'bg-indigo-100 text-indigo-500']">
-                {{ node.type === 'live' ? '直播预告' : '版本更新' }}
-              </span>
-              <p class="text-sm font-bold text-slate-800">{{ node.title }}</p>
-              <p class="text-xs text-slate-500 mt-1">{{ node.startTime }}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-xs font-medium text-slate-600 mb-2">{{ node.daysUntil }} 天后开始</p>
-              <button
-                class="nikki-action-btn" :class="[node.type === 'live' ? 'outline-rose' : 'outline-indigo']"
-                type="button"
-                @click.stop="$emit('toggleVersionReminder', node.id, !node.reminded)"
-              >
-                {{ node.reminded ? '取消提醒' : '设置提醒' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </LifeGeminiCard>
-
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
     <!-- 账号资产 -->
-    <LifeGeminiCard title="账号资产" action-text="管理" @action="$emit('switchTab', '资产')">
+    <LifeGeminiCard title="账号资产" action-text="管理" @action="$emit('switchTab', '账号资产')">
       <div class="flex items-start space-x-6">
         <div class="w-24 h-24 bg-gradient-to-br from-indigo-300 to-indigo-500 rounded-2xl shadow-lg relative flex items-center justify-center flex-shrink-0 border-b-4 border-indigo-600">
           <div class="w-16 h-16 border-2 border-indigo-200/50 rounded-xl relative flex items-center justify-center">
@@ -204,7 +200,7 @@ const weeklyCompletedText = computed(() => {
             <button
               class="appearance-none bg-transparent border-0 p-0 text-xs text-indigo-500 hover:text-indigo-600 font-medium"
               type="button"
-              @click="$emit('switchTab', '资产')"
+              @click="$emit('switchTab', '账号资产')"
             >
               查看全部
             </button>
@@ -214,7 +210,7 @@ const weeklyCompletedText = computed(() => {
     </LifeGeminiCard>
 
     <!-- 最近笔记 -->
-    <LifeGeminiCard title="最近笔记" action-text="查看全部" @action="$emit('switchTab', '笔记')">
+    <LifeGeminiCard title="最近笔记" action-text="查看时间轴" @action="$emit('switchTab', '时间轴')">
       <div class="space-y-4">
         <div
           v-for="note in noteData.notes.slice(0, 4)"
@@ -232,6 +228,31 @@ const weeklyCompletedText = computed(() => {
             </div>
           </div>
           <span class="text-[10px] text-slate-400 whitespace-nowrap pt-0.5">{{ note.relativeTime }}</span>
+        </div>
+      </div>
+    </LifeGeminiCard>
+
+    <!-- 素材收集 -->
+    <LifeGeminiCard title="素材收集" action-text="查看任务" @action="$emit('switchTab', '任务')">
+      <div class="space-y-3">
+        <div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+          <span class="inline-flex items-center text-xs text-slate-500">
+            <PackageCheck :size="13" class="mr-1" />收集进度
+          </span>
+          <span class="text-sm font-bold text-indigo-600">{{ materialData.completed }}/{{ materialData.total }}</span>
+        </div>
+        <div
+          v-for="material in materialData.materials.slice(0, 4)"
+          :key="material.id"
+          class="rounded-xl bg-slate-50 px-3 py-2"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <span class="min-w-0 truncate text-xs font-medium text-slate-700">{{ material.name }}</span>
+            <span class="shrink-0 text-[10px] text-slate-400">{{ getSummaryStatusLabel(material.status) }}</span>
+          </div>
+          <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
+            <div class="h-full rounded-full bg-indigo-500" :style="{ width: `${Math.min(100, Math.round((material.current / material.target) * 100))}%` }"></div>
+          </div>
         </div>
       </div>
     </LifeGeminiCard>
@@ -261,9 +282,9 @@ const weeklyCompletedText = computed(() => {
         <button
           class="appearance-none bg-transparent border-0 p-0 text-xs text-indigo-500 hover:text-indigo-600 font-medium"
           type="button"
-          @click="$emit('switchTab', 'AI')"
+          @click="$emit('refreshAi')"
         >
-          <MoreVertical :size="14" class="text-slate-400" />
+          <RefreshCw :size="14" />
         </button>
       </template>
       <div class="h-full min-h-48 flex flex-col justify-between overflow-hidden">
@@ -277,9 +298,9 @@ const weeklyCompletedText = computed(() => {
           <button
             class="appearance-none bg-transparent border-0 p-0 text-xs font-medium text-indigo-600 hover:text-indigo-700 flex min-w-0 items-center"
             type="button"
-            @click="$emit('switchTab', 'AI')"
+            @click="$emit('switchTab', '时间轴')"
           >
-            查看完整分析报告 <ChevronRight :size="12" class="ml-0.5" />
+            查看可供 AI 复盘的时间轴 <ChevronRight :size="12" class="ml-0.5" />
           </button>
           <div class="w-14 h-14 shrink-0 opacity-90 drop-shadow-md">
             <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -311,17 +332,17 @@ const weeklyCompletedText = computed(() => {
     </div>
     <div class="nikki-activity-timeline">
       <div
-        v-for="item in activities"
+        v-for="item in recentTimelineEvents"
         :key="item.id"
         class="activity-node"
-        @click="$emit('openDetail', { type: 'activity', id: item.id })"
+        @click="$emit('openDetail', { type: 'timeline', id: item.id })"
       >
-        <div class="activity-icon" :class="[item.bg]">
-          <component :is="iconMap[item.icon]" :size="20" :class="item.iconColor" />
+        <div class="activity-icon bg-indigo-50">
+          <component :is="getTimelineIcon(item.type)" :size="20" class="text-indigo-500" />
         </div>
         <p class="text-xs font-bold text-slate-700 text-center">{{ item.title }}</p>
         <p class="text-[10px] text-slate-500 text-center mt-0.5">{{ item.description }}</p>
-        <p class="text-[9px] text-slate-400 text-center mt-1">{{ item.time }}</p>
+        <p class="text-[9px] text-slate-400 text-center mt-1">{{ formatTimelineTime(item.occurredAt) }}</p>
       </div>
     </div>
   </section>

@@ -7,36 +7,33 @@ import type {
   AiOverview,
   ApiResponse,
   AssetOverview,
-  CountdownOverview,
-  DailyTaskOverview,
   GalleryOverview,
   GameActivity,
   GameTarget,
   GameVersion,
-  NikkiActivity,
+  MaterialOverview,
   NikkiAsset,
   NikkiNote,
   NikkiProject,
   NoteOverview,
   OverviewSummary,
-  TimelineEvent,
-  WeeklyGoal
+  TimelineEvent
 } from './types';
 import {
-  mockActivities,
   mockAbilityInstanceConfigs,
   mockAiOverview,
   mockAssetOverview,
-  mockCountdownOverview,
-  mockDailyTaskOverview,
   mockGameActivities,
   mockGameTargets,
   mockGameVersions,
   mockGalleryOverview,
+  mockMaterialOverview,
   mockNoteOverview,
   mockProject,
   mockTimelineEvents
 } from './mock';
+
+const ABILITY_CONFIG_STORAGE_KEY = 'life-manager.infinity-nikki.ability-configs';
 
 /** 模拟网络延迟 */
 function delay(ms = 300): Promise<void> {
@@ -56,8 +53,35 @@ function clone<T>(data: T): T {
   return JSON.parse(JSON.stringify(data)) as T;
 }
 
+function readStoredAbilityConfigs(): AbilityInstanceConfig[] {
+  if (typeof window === 'undefined') {
+    return clone(mockAbilityInstanceConfigs);
+  }
+
+  const raw = window.localStorage.getItem(ABILITY_CONFIG_STORAGE_KEY);
+  if (!raw) {
+    return clone(mockAbilityInstanceConfigs);
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as AbilityInstanceConfig[];
+    return Array.isArray(parsed) ? parsed : clone(mockAbilityInstanceConfigs);
+  } catch {
+    return clone(mockAbilityInstanceConfigs);
+  }
+}
+
+function writeStoredAbilityConfigs(configs: AbilityInstanceConfig[]) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(ABILITY_CONFIG_STORAGE_KEY, JSON.stringify(configs));
+}
+
 function buildOverviewSummaries(): OverviewSummary[] {
-  const overviewConfig = mockAbilityInstanceConfigs.find(config => config.blockKey === 'overview');
+  const abilityConfigs = readStoredAbilityConfigs();
+  const overviewConfig = abilityConfigs.find(config => config.blockKey === 'overview');
   const rules = [...(overviewConfig?.summaryRules ?? [])]
     .filter(rule => rule.enabled)
     .sort((prev, next) => prev.priority - next.priority);
@@ -83,7 +107,7 @@ function buildOverviewSummaries(): OverviewSummary[] {
         ruleId: rule.id,
         title: rule.title,
         value: `${doneCount}/${dailyTargets.length}`,
-        description: '日常目标由任务功能块的展示规则控制',
+        description: `今日还有 ${dailyTargets.length - doneCount} 项待完成`,
         items: dailyTargets
           .filter(target => target.status !== 'done')
           .slice(0, rule.maxItems)
@@ -116,7 +140,7 @@ function buildOverviewSummaries(): OverviewSummary[] {
         ruleId: rule.id,
         title: rule.title,
         value: `${endingActivities.length}个`,
-        description: '活动结束后会触发归档规则，并写入项目时间轴',
+        description: '优先处理临近结束的活动目标',
         items: endingActivities
           .slice(0, rule.maxItems)
           .map(activity => ({ id: activity.id, label: activity.title, status: activity.status, targetRoute: 'version_activity' })),
@@ -137,6 +161,52 @@ function buildOverviewSummaries(): OverviewSummary[] {
           .slice(0, rule.maxItems)
           .map(event => ({ id: event.id, label: event.title, status: event.type, targetRoute: 'timeline' })),
         targetRoute: 'timeline'
+      };
+    }
+
+    if (rule.id === 'sum-material-progress') {
+      const activeMaterials = mockMaterialOverview.materials.filter(material => material.status !== 'archived');
+      const completedCount = activeMaterials.filter(material => material.status === 'completed').length;
+      return {
+        id: 'overview-material-progress',
+        ruleId: rule.id,
+        title: rule.title,
+        value: `${completedCount}/${activeMaterials.length}`,
+        description: '套装、素材和代币收集进度',
+        items: activeMaterials
+          .filter(material => material.status !== 'completed')
+          .slice(0, rule.maxItems)
+          .map(material => ({ id: material.id, label: material.name, status: material.status, targetRoute: 'targets' })),
+        targetRoute: 'targets'
+      };
+    }
+
+    if (rule.id === 'sum-gallery-recent') {
+      return {
+        id: 'overview-gallery-recent',
+        ruleId: rule.id,
+        title: rule.title,
+        value: `${mockGalleryOverview.photoCount}张`,
+        description: `${mockGalleryOverview.albumCount} 个图册`,
+        items: mockGalleryOverview.recentPhotos
+          .slice(0, rule.maxItems)
+          .map(photo => ({ id: photo.id, label: photo.caption ?? '照片记录', status: 'photo_uploaded', targetRoute: 'gallery' })),
+        targetRoute: 'gallery'
+      };
+    }
+
+    if (rule.id === 'sum-asset-risk') {
+      const riskAssets = mockAssetOverview.assets.filter(asset => ['pending', 'expired'].includes(asset.status));
+      return {
+        id: 'overview-asset-risk',
+        ruleId: rule.id,
+        title: rule.title,
+        value: riskAssets.length ? `${riskAssets.length}个` : '正常',
+        description: riskAssets.length ? '存在待处理或过期资产' : '账号资产暂无异常',
+        items: riskAssets
+          .slice(0, rule.maxItems)
+          .map(asset => ({ id: asset.id, label: asset.name, status: asset.status, targetRoute: 'assets' })),
+        targetRoute: 'assets'
       };
     }
 
@@ -184,6 +254,24 @@ export async function fetchGameTargets(): Promise<ApiResponse<GameTarget[]>> {
   return wrap(clone(mockGameTargets));
 }
 
+/** 切换游戏目标状态 */
+export async function toggleGameTargetStatus(
+  targetId: string,
+  status: GameTarget['status']
+): Promise<ApiResponse<{ id: string; status: GameTarget['status'] }>> {
+  await delay(200);
+  return wrap({ id: targetId, status });
+}
+
+/** 更新游戏目标进度 */
+export async function updateGameTargetProgress(
+  targetId: string,
+  current: number
+): Promise<ApiResponse<{ id: string; current: number }>> {
+  await delay(200);
+  return wrap({ id: targetId, current });
+}
+
 /** 获取项目时间轴 */
 export async function fetchTimelineEvents(): Promise<ApiResponse<TimelineEvent[]>> {
   await delay();
@@ -193,7 +281,15 @@ export async function fetchTimelineEvents(): Promise<ApiResponse<TimelineEvent[]
 /** 获取功能块实例配置 */
 export async function fetchAbilityInstanceConfigs(): Promise<ApiResponse<AbilityInstanceConfig[]>> {
   await delay();
-  return wrap(clone(mockAbilityInstanceConfigs));
+  return wrap(readStoredAbilityConfigs());
+}
+
+/** 保存功能块实例配置 */
+export async function saveAbilityInstanceConfigs(configs: AbilityInstanceConfig[]): Promise<ApiResponse<AbilityInstanceConfig[]>> {
+  await delay(120);
+  const nextConfigs = clone(configs);
+  writeStoredAbilityConfigs(nextConfigs);
+  return wrap(nextConfigs);
 }
 
 /** 获取概览摘要 */
@@ -202,80 +298,10 @@ export async function fetchOverviewSummaries(): Promise<ApiResponse<OverviewSumm
   return wrap(clone(buildOverviewSummaries()));
 }
 
-// ========== 日常任务 ==========
-
-/** 获取日常任务概览（含分组和周常目标） */
-export async function fetchDailyTaskOverview(): Promise<ApiResponse<DailyTaskOverview>> {
+/** 获取素材/收集概览 */
+export async function fetchMaterialOverview(): Promise<ApiResponse<MaterialOverview>> {
   await delay();
-  return wrap(JSON.parse(JSON.stringify(mockDailyTaskOverview)));
-}
-
-/** 切换任务完成状态 */
-export async function toggleTask(taskId: string, done: boolean): Promise<ApiResponse<{ id: string; done: boolean }>> {
-  await delay(200);
-  return wrap({ id: taskId, done });
-}
-
-/** 更新周常目标进度 */
-export async function updateWeeklyGoalProgress(
-  goalId: string,
-  current: number
-): Promise<ApiResponse<{ id: string; current: number }>> {
-  await delay(200);
-  return wrap({ id: goalId, current });
-}
-
-/** 切换周常目标状态 */
-export async function toggleWeeklyGoalStatus(
-  goalId: string,
-  status: WeeklyGoal['status']
-): Promise<ApiResponse<{ id: string; status: WeeklyGoal['status'] }>> {
-  await delay(200);
-  return wrap({ id: goalId, status });
-}
-
-// ========== 倒计时 ==========
-
-/** 获取倒计时概览 */
-export async function fetchCountdownOverview(): Promise<ApiResponse<CountdownOverview>> {
-  await delay();
-  return wrap(JSON.parse(JSON.stringify(mockCountdownOverview)));
-}
-
-/** 设置/取消活动提醒 */
-export async function toggleEventReminder(
-  eventId: string,
-  reminded: boolean
-): Promise<ApiResponse<{ id: string; reminded: boolean }>> {
-  await delay(200);
-  return wrap({ id: eventId, reminded });
-}
-
-/** 活动打卡/撤回 */
-export async function toggleEventCheckIn(
-  eventId: string,
-  checkedIn: boolean
-): Promise<ApiResponse<{ id: string; checkedIn: boolean }>> {
-  await delay(200);
-  return wrap({ id: eventId, checkedIn });
-}
-
-/** 设置/取消版本节点提醒 */
-export async function toggleVersionReminder(
-  nodeId: string,
-  reminded: boolean
-): Promise<ApiResponse<{ id: string; reminded: boolean }>> {
-  await delay(200);
-  return wrap({ id: nodeId, reminded });
-}
-
-/** 版本节点打卡/撤回 */
-export async function toggleVersionCheckIn(
-  nodeId: string,
-  checkedIn: boolean
-): Promise<ApiResponse<{ id: string; checkedIn: boolean }>> {
-  await delay(200);
-  return wrap({ id: nodeId, checkedIn });
+  return wrap(clone(mockMaterialOverview));
 }
 
 // ========== 资产 ==========
@@ -321,19 +347,25 @@ export async function fetchGalleryOverview(): Promise<ApiResponse<GalleryOvervie
 /** 获取 AI 建议 */
 export async function fetchAiOverview(): Promise<ApiResponse<AiOverview>> {
   await delay(500);
-  return wrap(JSON.parse(JSON.stringify(mockAiOverview)));
+  const pendingTargets = mockGameTargets.filter(target => target.status === 'todo').length;
+  const archiveReadyActivities = mockGameActivities.filter(activity => ['ending', 'pending_archive'].includes(activity.status));
+  const collectingMaterials = mockMaterialOverview.materials.filter(material => material.status === 'collecting');
+  return wrap({
+    ...clone(mockAiOverview),
+    currentSuggestion: {
+      ...clone(mockAiOverview.currentSuggestion),
+      highlights: [
+        { text: `你还有 ${pendingTargets} 个任务目标未完成`, type: pendingTargets > 5 ? 'danger' : 'info' },
+        { text: archiveReadyActivities.length ? `有 ${archiveReadyActivities.length} 个活动需要结束前处理或归档` : '当前没有临近结束的活动', type: archiveReadyActivities.length ? 'warning' : 'success' },
+        { text: `素材收集中 ${collectingMaterials.length} 项，建议优先推进关联活动素材`, type: collectingMaterials.length ? 'warning' : 'success' },
+        { text: '最近截图、笔记和活动记录已进入时间轴，可用于版本复盘', type: 'info' }
+      ]
+    }
+  });
 }
 
 /** 刷新 AI 建议 */
 export async function refreshAiSuggestion(): Promise<ApiResponse<AiOverview>> {
   await delay(800);
   return wrap(JSON.parse(JSON.stringify(mockAiOverview)));
-}
-
-// ========== 最近动态 ==========
-
-/** 获取最近动态 */
-export async function fetchActivities(): Promise<ApiResponse<NikkiActivity[]>> {
-  await delay();
-  return wrap(JSON.parse(JSON.stringify(mockActivities)));
 }

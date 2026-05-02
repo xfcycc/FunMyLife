@@ -28,78 +28,6 @@ export interface NikkiProjectStat {
   value: number | string;
 }
 
-// ========== 日常任务 ==========
-
-/** 任务分组类型 */
-export type TaskGroupType = 'daily' | 'weekly' | 'event';
-
-/** 任务分组 */
-export interface TaskGroup {
-  type: TaskGroupType;
-  label: string;
-  tasks: DailyTask[];
-}
-
-/** 日常任务 */
-export interface DailyTask {
-  id: string;
-  text: string;
-  done: boolean;
-  detail?: string;
-  group: TaskGroupType;
-}
-
-/** 周常目标 */
-export interface WeeklyGoal {
-  id: string;
-  text: string;
-  current: number;
-  max: number;
-  progress: number;
-  status: 'on_track' | 'needs_attention' | 'completed';
-  color: string;
-}
-
-/** 日常任务概览 */
-export interface DailyTaskOverview {
-  completed: number;
-  total: number;
-  taskGroups: TaskGroup[];
-  weeklyGoals: WeeklyGoal[];
-}
-
-// ========== 倒计时 ==========
-
-/** 活动倒计时 */
-export interface EventCountdown {
-  id: string;
-  title: string;
-  description?: string;
-  endTime: string;
-  remainingDays: number;
-  img: string;
-  reminded: boolean;
-  checkedIn: boolean;
-}
-
-/** 版本节点 */
-export interface VersionNode {
-  id: string;
-  type: 'live' | 'maintenance' | 'update';
-  title: string;
-  startTime: string;
-  endTime?: string;
-  daysUntil: number;
-  reminded: boolean;
-  checkedIn: boolean;
-}
-
-/** 倒计时概览 */
-export interface CountdownOverview {
-  events: EventCountdown[];
-  versionNodes: VersionNode[];
-}
-
 // ========== 资产 ==========
 
 /** 资产类型 */
@@ -110,10 +38,11 @@ export interface NikkiAsset {
   id: string;
   name: string;
   type: AssetType;
-  status: 'protected' | 'bound' | 'pending' | 'expired';
+  status: 'protected' | 'bound' | 'pending' | 'expired' | 'archived';
   statusLabel: string;
   icon?: string;
   description?: string;
+  archivedAt?: string;
 }
 
 /** 资产概览 */
@@ -163,6 +92,9 @@ export interface NikkiPhoto {
   thumbnail: string;
   caption?: string;
   takenAt: string;
+  versionId?: string;
+  activityId?: string;
+  targetId?: string;
 }
 
 /** 图册概览 */
@@ -193,24 +125,6 @@ export interface AiHighlight {
 export interface AiOverview {
   currentSuggestion: AiSuggestion;
   suggestionCount: number;
-}
-
-// ========== 最近动态 ==========
-
-/** 动态类型 */
-export type ActivityType = 'task_complete' | 'note_added' | 'screenshot_uploaded' | 'event_progress' | 'version_announcement';
-
-/** 动态 */
-export interface NikkiActivity {
-  id: string;
-  type: ActivityType;
-  title: string;
-  description: string;
-  icon: string;
-  iconColor: string;
-  bg: string;
-  time: string;
-  createdAt: string;
 }
 
 // ========== 详情弹框 ==========
@@ -251,7 +165,7 @@ export interface GameVersion {
 }
 
 /** 游戏活动状态 */
-export type GameActivityStatus = 'upcoming' | 'active' | 'ending' | 'ended' | 'archived';
+export type GameActivityStatus = 'upcoming' | 'active' | 'ending' | 'ended' | 'pending_archive' | 'archived';
 
 /** 游戏活动 */
 export interface GameActivity {
@@ -299,11 +213,39 @@ export interface GameTarget {
   archivedAt?: string;
 }
 
+/** 素材/收集项类型 */
+export type NikkiMaterialType = 'outfit' | 'material' | 'currency' | 'collection';
+
+/** 素材/收集项状态 */
+export type NikkiMaterialStatus = 'planning' | 'collecting' | 'completed' | 'archived';
+
+/** 素材/收集项 */
+export interface NikkiMaterial {
+  id: string;
+  projectId: string;
+  name: string;
+  type: NikkiMaterialType;
+  status: NikkiMaterialStatus;
+  current: number;
+  target: number;
+  versionId?: string;
+  activityId?: string;
+  targetId?: string;
+  note?: string;
+}
+
+/** 素材/收集概览 */
+export interface MaterialOverview {
+  total: number;
+  completed: number;
+  materials: NikkiMaterial[];
+}
+
 /** 概览摘要规则 */
 export interface OverviewSummaryRule {
   id: string;
   projectId: string;
-  source: 'targets' | 'activities' | 'version' | 'materials' | 'gallery' | 'timeline' | 'ai';
+  source: 'targets' | 'activities' | 'version' | 'materials' | 'gallery' | 'assets' | 'timeline' | 'ai';
   enabled: boolean;
   title: string;
   maxItems: number;

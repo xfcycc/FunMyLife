@@ -9,7 +9,7 @@ export const mockGameActivities: GameActivity[] = [
     description: '完成奇迹之旅第二章全部关卡，获取限定套装奖励。',
     startAt: '2026-04-24T05:00:00',
     endAt: '2026-05-02T05:00:00',
-    status: 'ending',
+    status: 'pending_archive',
     priority: 'high',
     cover: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=100&h=100&q=80',
     targetIds: ['e1'],
