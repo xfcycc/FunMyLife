@@ -314,8 +314,17 @@ export const infinityNikkiSchemeTemplate: SchemeTemplate = {
   ],
   timelineRules: [
     { id: 'target-daily-summary', sourceBlockKey: 'targets', event: 'target_done', writeMode: 'daily_summary', displayInOverview: true, aiReadable: true },
-    { id: 'activity-archive-detail', sourceBlockKey: 'version_activity', event: 'activity_archived', writeMode: 'detail', displayInOverview: true, aiReadable: true },
-    { id: 'photo-upload-detail', sourceBlockKey: 'gallery', event: 'photo_uploaded', writeMode: 'detail', displayInOverview: true, aiReadable: true },
+    { id: 'target-weekly-summary', sourceBlockKey: 'targets', event: 'target_done', writeMode: 'weekly_summary', displayInOverview: true, aiReadable: true },
+    { id: 'target-skipped-detail', sourceBlockKey: 'targets', event: 'target_skipped', writeMode: 'detail', displayInOverview: false, aiReadable: true },
+    { id: 'target-expired-detail', sourceBlockKey: 'targets', event: 'target_expired', writeMode: 'detail', displayInOverview: true, aiReadable: true },
+    { id: 'activity-started-detail', sourceBlockKey: 'version_activity', event: 'activity_started', writeMode: 'detail', displayInOverview: true, aiReadable: true },
+    { id: 'activity-ending-detail', sourceBlockKey: 'version_activity', event: 'activity_ending', writeMode: 'detail', displayInOverview: true, aiReadable: true },
+    { id: 'activity-archived-detail', sourceBlockKey: 'version_activity', event: 'activity_archived', writeMode: 'detail', displayInOverview: true, aiReadable: true },
+    { id: 'version-archived-detail', sourceBlockKey: 'version_activity', event: 'version_archived', writeMode: 'detail', displayInOverview: true, aiReadable: true },
+    { id: 'material-completed-detail', sourceBlockKey: 'materials', event: 'material_completed', writeMode: 'detail', displayInOverview: true, aiReadable: true },
+    { id: 'photo-upload-detail', sourceBlockKey: 'gallery', event: 'photo_uploaded', writeMode: 'daily_summary', displayInOverview: true, aiReadable: true },
+    { id: 'note-created-detail', sourceBlockKey: 'timeline', event: 'note_created', writeMode: 'detail', displayInOverview: true, aiReadable: true },
+    { id: 'ai-summary-confirm', sourceBlockKey: 'ai', event: 'ai_summary_generated', writeMode: 'detail', displayInOverview: true, aiReadable: true, requireConfirm: true },
     { id: 'asset-exception-only', sourceBlockKey: 'assets', event: 'asset_changed', writeMode: 'exception_only', displayInOverview: false, aiReadable: false }
   ],
   seedData: {

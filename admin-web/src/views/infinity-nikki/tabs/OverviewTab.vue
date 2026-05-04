@@ -78,7 +78,6 @@ const statusLabelMap: Record<string, string> = {
   version_archived: '版本归档',
   local_note: '快速记录',
   collecting: '收集中',
-  planning: '计划中',
   completed: '已完成',
   archived: '已归档',
   protected: '已保护',

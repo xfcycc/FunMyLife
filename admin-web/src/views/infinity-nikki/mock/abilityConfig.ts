@@ -3,7 +3,9 @@ import type { SchemeBlockInstance, SchemeOverviewRule } from '@/constants/life-m
 import type {
   AbilityBlockKey,
   AbilityInstanceConfig,
+  AiRules,
   ArchiveRule,
+  BlockSecurity,
   FieldConfig,
   OverviewSummaryRule,
   ReminderRule,
@@ -54,7 +56,9 @@ function toAbilityConfig(block: SchemeBlockInstance): AbilityInstanceConfig {
             defaultWriteRule: block.timeline.defaultWriteRule as TimelineWriteRule
           }
         }
-      : {})
+      : {}),
+    ...(block.aiRules ? { aiRules: block.aiRules as AiRules } : {}),
+    ...(block.security ? { security: block.security as BlockSecurity } : {})
   };
 }
 

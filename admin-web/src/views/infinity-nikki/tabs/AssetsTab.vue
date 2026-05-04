@@ -182,13 +182,27 @@ function handleCreateAsset() {
     return;
   }
 
+  const now = new Date().toISOString();
+  const categoryMap: Record<NikkiAsset['type'], NikkiAsset['category']> = {
+    official_account: 'account',
+    sub_account: 'account',
+    switch_account: 'account',
+    payment: 'payment',
+    redeem_code: 'redeem_code'
+  };
   emit('createAsset', {
     id: `asset-${Date.now()}`,
+    projectId: 'nikki-001',
     name: assetForm.name.trim(),
     type: assetForm.type,
+    category: categoryMap[assetForm.type],
     status: assetForm.status,
     statusLabel: statusLabel(assetForm.status),
-    description: assetForm.description.trim() || undefined
+    sensitivity: assetForm.type === 'payment' ? 'sensitive' : 'normal',
+    description: assetForm.description.trim() || undefined,
+    timelineRule: { mode: 'exception_only', displayInOverview: false, aiReadable: false },
+    createdAt: now,
+    updatedAt: now
   });
   resetAssetForm();
   showCreateAsset.value = false;

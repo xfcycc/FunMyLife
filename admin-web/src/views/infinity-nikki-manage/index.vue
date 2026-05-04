@@ -52,12 +52,6 @@ interface AssetItem {
   avatar: string;
 }
 
-interface AiSetting {
-  title: string;
-  desc: string;
-  active: boolean;
-}
-
 interface IntegrationItem {
   name: string;
   icon: string;
@@ -181,12 +175,9 @@ const assets = ref<AssetItem[]>([
   }
 ]);
 
-const aiSettings = ref<AiSetting[]>([
-  { title: '活动总结', desc: '活动结束后自动生成总结', active: true },
-  { title: '日常复盘', desc: '每日任务完成后生成复盘建议', active: true },
-  { title: '攻略笔记整理', desc: '自动整理笔记并生成要点', active: false },
-  { title: '版本更新解读', desc: '版本更新后自动生成重点解读', active: true }
-]);
+const aiAutomationConfigs = computed(() =>
+  abilityConfigs.value.filter(config => config.aiRules)
+);
 
 const integrations = ref<IntegrationItem[]>([
   { name: '飞书机器人', icon: 'material-symbols:send-outline-rounded', tone: 'blue', status: '已连接' },
@@ -284,7 +275,7 @@ const stats = computed<StatItem[]>(() => [
   { label: '提醒规则', value: String(reminders.value.length + 4), icon: 'material-symbols:timer-outline-rounded', tone: 'rose' },
   { label: '关联资产', value: String(assets.value.length), icon: 'material-symbols:paid-outline-rounded', tone: 'amber' },
   { label: '图册数量', value: '5', icon: 'material-symbols:photo-library-outline-rounded', tone: 'emerald' },
-  { label: '概览规则', value: String(overviewRules.value.length || aiSettings.value.filter(item => item.active).length - 1), icon: 'material-symbols:auto-awesome-outline-rounded', tone: 'purple' }
+  { label: '概览规则', value: String(overviewRules.value.length || aiAutomationConfigs.value.length), icon: 'material-symbols:auto-awesome-outline-rounded', tone: 'purple' }
 ]);
 
 const projectHeroStats = computed<LifeGeminiProjectStat[]>(() => [
@@ -311,9 +302,13 @@ function toggleReminder(rule: ReminderRule) {
   info(rule.enabled ? '提醒规则已启用' : '提醒规则已停用', rule.title);
 }
 
-function toggleAi(setting: AiSetting) {
-  setting.active = !setting.active;
-  info(setting.active ? 'AI 自动化已开启' : 'AI 自动化已关闭', setting.title);
+async function toggleAiConfig(config: AbilityInstanceConfig) {
+  if (!config.aiRules) {
+    return;
+  }
+
+  config.aiRules.readable = !config.aiRules.readable;
+  await persistAbilityConfigState(config.aiRules.readable ? 'AI 可读已开启' : 'AI 可读已关闭', config.displayName);
 }
 
 async function persistAbilityConfigState(message: string, detail: string) {
@@ -852,12 +847,12 @@ onMounted(async () => {
 
         <LifeGeminiCard class="config-card compact-card" title="AI 自动化设置">
           <div class="ai-list">
-            <div v-for="item in aiSettings" :key="item.title" class="ai-item">
+            <div v-for="config in aiAutomationConfigs" :key="config.id" class="ai-item">
               <span>
-                <strong>{{ item.title }}</strong>
-                <small>{{ item.desc }}</small>
+                <strong>{{ config.displayName }}</strong>
+                <small>{{ config.aiRules?.allowedUse?.join('、') ?? '未配置' }}</small>
               </span>
-              <button class="toggle-switch" :class="{ active: item.active }" type="button" :aria-label="`切换${item.title}`" @click="toggleAi(item)">
+              <button class="toggle-switch" :class="{ active: config.aiRules?.readable }" type="button" :aria-label="`切换${config.displayName} AI`" @click="toggleAiConfig(config)">
                 <i></i>
               </button>
             </div>

@@ -33,16 +33,29 @@ export interface NikkiProjectStat {
 /** 资产类型 */
 export type AssetType = 'official_account' | 'sub_account' | 'switch_account' | 'payment' | 'redeem_code';
 
+/** 资产分类（来自设计稿） */
+export type AssetCategory = 'account' | 'uid' | 'redeem_code' | 'payment' | 'link' | 'other';
+
 /** 账号资产 */
 export interface NikkiAsset {
   id: string;
+  projectId: string;
   name: string;
   type: AssetType;
+  category: AssetCategory;
+  value?: string;
   status: 'protected' | 'bound' | 'pending' | 'expired' | 'archived';
   statusLabel: string;
+  sensitivity: 'normal' | 'sensitive';
   icon?: string;
   description?: string;
+  linkedUrl?: string;
+  expiresAt?: string;
+  notes?: string;
+  timelineRule: TimelineWriteRule;
   archivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** 资产概览 */
@@ -53,16 +66,26 @@ export interface AssetOverview {
 
 // ========== 笔记 ==========
 
-/** 笔记分类 */
+/** 笔记分类（话题维度） */
 export type NoteCategory = 'strategy' | 'explore' | 'coordination' | 'material' | 'story';
+
+/** 笔记类型（内容形态，来自设计稿） */
+export type NoteType = 'note' | 'guide' | 'review';
 
 /** 笔记 */
 export interface NikkiNote {
   id: string;
+  projectId: string;
   title: string;
+  content: string;
+  type: NoteType;
   category: NoteCategory;
   categoryLabel: string;
-  content?: string;
+  versionId?: string;
+  activityId?: string;
+  targetId?: string;
+  pinnedToOverview?: boolean;
+  timelineRule: TimelineWriteRule;
   createdAt: string;
   updatedAt: string;
   relativeTime: string;
@@ -214,10 +237,10 @@ export interface GameTarget {
 }
 
 /** 素材/收集项类型 */
-export type NikkiMaterialType = 'outfit' | 'material' | 'currency' | 'collection';
+export type NikkiMaterialType = 'outfit' | 'material' | 'currency' | 'collection' | 'recipe' | 'other';
 
 /** 素材/收集项状态 */
-export type NikkiMaterialStatus = 'planning' | 'collecting' | 'completed' | 'archived';
+export type NikkiMaterialStatus = 'collecting' | 'completed' | 'archived';
 
 /** 素材/收集项 */
 export interface NikkiMaterial {
@@ -225,13 +248,17 @@ export interface NikkiMaterial {
   projectId: string;
   name: string;
   type: NikkiMaterialType;
+  description?: string;
   status: NikkiMaterialStatus;
   current: number;
   target: number;
   versionId?: string;
   activityId?: string;
   targetId?: string;
+  timelineRule: TimelineWriteRule;
   note?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** 素材/收集概览 */
@@ -271,6 +298,20 @@ export type AbilityBlockKey =
   | 'timeline'
   | 'ai';
 
+/** AI 规则 */
+export interface AiRules {
+  readable: boolean;
+  writableAfterConfirm: boolean;
+  allowedUse: string[];
+}
+
+/** 安全策略 */
+export interface BlockSecurity {
+  sensitivity: 'normal' | 'private' | 'sensitive';
+  maskInOverview: boolean;
+  requireConfirmBeforeExternalWrite: boolean;
+}
+
 /** 功能块实例配置 */
 export interface AbilityInstanceConfig {
   id: string;
@@ -294,6 +335,8 @@ export interface AbilityInstanceConfig {
     enabled: boolean;
     defaultWriteRule: TimelineWriteRule;
   };
+  aiRules?: AiRules;
+  security?: BlockSecurity;
 }
 
 /** 时间轴事件类型 */
@@ -386,6 +429,29 @@ export interface OverviewSummary {
     targetRoute?: string;
   }>;
   targetRoute?: string;
+}
+
+// ========== 待确认收件箱 ==========
+
+/** 待确认来源 */
+export type PendingSource = 'ai_extract' | 'feishu_import' | 'webhook' | 'ocr' | 'manual';
+
+/** 待确认状态 */
+export type PendingStatus = 'pending' | 'confirmed' | 'ignored' | 'expired';
+
+/** 待确认收件箱条目 */
+export interface PendingItem {
+  id: string;
+  projectId?: string;
+  blockKey?: AbilityBlockKey;
+  source: PendingSource;
+  title: string;
+  content: string;
+  suggestedAction?: string;
+  status: PendingStatus;
+  rawData?: Record<string, unknown>;
+  confirmedAt?: string;
+  createdAt: string;
 }
 
 // ========== API 响应 ==========

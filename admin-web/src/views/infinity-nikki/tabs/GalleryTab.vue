@@ -26,6 +26,8 @@ const detailPhoto = ref<NikkiPhoto | null>(null);
 const showCreatePhoto = ref(false);
 const showEditPhoto = ref(false);
 const pendingDeletePhoto = ref<NikkiPhoto | null>(null);
+const showAlbumDetail = ref(false);
+const detailAlbum = ref<NikkiAlbum | null>(null);
 const photoForm = reactive({
   albumId: '',
   caption: '',
@@ -48,8 +50,13 @@ function albumName(albumId: string) {
   return props.galleryData.albums.find(a => a.id === albumId)?.name ?? '未知图册';
 }
 
-function openAlbum(_album: NikkiAlbum) {
-  // TODO: 打开图册详情（当前仅展示）
+function openAlbum(album: NikkiAlbum) {
+  detailAlbum.value = album;
+  showAlbumDetail.value = true;
+}
+
+function albumPhotos(albumId: string) {
+  return props.galleryData.recentPhotos.filter(photo => photo.albumId === albumId);
 }
 
 function openPhoto(photo: NikkiPhoto) {
@@ -362,5 +369,31 @@ function handleCreatePhoto() {
       @update:show="value => { if (!value) pendingDeletePhoto = null; }"
       @confirm="handleDeletePhoto"
     />
+
+    <!-- 图册详情弹框 -->
+    <LifeModal
+      v-model:show="showAlbumDetail"
+      :title="detailAlbum?.name ?? '图册详情'"
+      :width="600"
+      :show-footer="false"
+    >
+      <div v-if="detailAlbum" class="space-y-4">
+        <div class="flex items-center gap-3 text-xs text-slate-500">
+          <span>{{ detailAlbum.photoCount }} 张照片</span>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div
+            v-for="photo in albumPhotos(detailAlbum.id)"
+            :key="photo.id"
+            class="aspect-[4/3] rounded-lg overflow-hidden bg-slate-100 cursor-pointer group relative"
+            @click="openPhoto(photo)"
+          >
+            <img :src="photo.thumbnail" :alt="photo.caption" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+          </div>
+        </div>
+        <p v-if="albumPhotos(detailAlbum.id).length === 0" class="text-xs text-slate-400 text-center py-8">该图册暂无最近照片</p>
+      </div>
+    </LifeModal>
   </div>
 </template>
