@@ -10,8 +10,8 @@ import LifeToastHost from '@/components/life-manager/LifeToastHost.vue';
 import type { LifeGeminiProjectStat, LifeGeminiProjectTag } from '@/components/life-manager/types';
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
 import { useRouterPush } from '@/hooks/common/router';
-import { fetchAbilityInstanceConfigs, saveAbilityInstanceConfigs } from '../infinity-nikki/service';
-import type { AbilityBlockKey, AbilityInstanceConfig, ArchiveRule, OverviewSummaryRule, TimelineWriteRule } from '../infinity-nikki/types';
+import { fetchAbilityInstanceConfigs, fetchProject, saveAbilityInstanceConfigs } from '../infinity-nikki/service';
+import type { AbilityBlockKey, AbilityInstanceConfig, ArchiveRule, NikkiProject, OverviewSummaryRule, TimelineWriteRule } from '../infinity-nikki/types';
 
 defineOptions({
   name: 'InfinityNikkiManage'
@@ -72,23 +72,34 @@ const syncRunning = ref(false);
 const modalShow = ref(false);
 const modalTitle = ref('新建配置');
 const modalDescription = ref('当前为演示配置流程，后续可接入真实表单与接口。');
+const project = ref<NikkiProject>({
+  id: '',
+  name: '无限暖暖',
+  description: '',
+  coverSrc: '',
+  coverAlt: '',
+  status: 'active',
+  createdAt: '',
+  tags: [],
+  stats: []
+});
 const abilityConfigs = ref<AbilityInstanceConfig[]>([]);
 const selectedAbilityId = ref('');
 
 const tabs = ['功能块实例', '概览摘要', '时间轴规则', '归档规则', '基础信息', '自动化集成'] satisfies TabLabel[];
 
-const projectTags: LifeGeminiProjectTag[] = [
+const projectTags = computed<LifeGeminiProjectTag[]>(() => project.value.tags.length ? project.value.tags : [
   { label: '游戏项目' },
   { label: '进行中', tone: 'success' }
-];
+]);
 
-const metaInfo = [
-  { label: '创建时间', value: '2025-04-10' },
-  { label: '开始时间', value: '2024-12-05' },
+const metaInfo = computed(() => [
+  { label: '创建时间', value: project.value.createdAt || '2025-04-10' },
   { label: '类型', value: '游戏' },
+  { label: '状态', value: project.value.status === 'active' ? '进行中' : project.value.status === 'paused' ? '已暂停' : '已归档' },
   { label: '时区', value: 'Asia/Shanghai' },
   { label: '备注', value: '编辑备注', action: true }
-];
+]);
 
 const reminders = ref<ReminderRule[]>([
   {
@@ -278,10 +289,15 @@ const stats = computed<StatItem[]>(() => [
   { label: '概览规则', value: String(overviewRules.value.length || aiAutomationConfigs.value.length), icon: 'material-symbols:auto-awesome-outline-rounded', tone: 'purple' }
 ]);
 
-const projectHeroStats = computed<LifeGeminiProjectStat[]>(() => [
-  ...stats.value.map(item => ({ label: item.label, value: item.value })),
-  ...metaInfo.slice(0, 3).map(item => ({ label: item.label, value: item.value }))
-]);
+const projectHeroStats = computed<LifeGeminiProjectStat[]>(() => {
+  if (project.value.stats.length) {
+    return project.value.stats;
+  }
+  return [
+    ...stats.value.map(item => ({ label: item.label, value: item.value })),
+    ...metaInfo.value.slice(0, 3).map(item => ({ label: item.label, value: item.value }))
+  ];
+});
 
 function backToProject() {
   routerPushByKey('infinity-nikki');
@@ -404,9 +420,37 @@ function resetConfig() {
 }
 
 onMounted(async () => {
-  const res = await fetchAbilityInstanceConfigs();
-  abilityConfigs.value = res.data;
-  selectedAbilityId.value = res.data[0]?.id ?? '';
+  const [configRes, projectRes] = await Promise.all([
+    fetchAbilityInstanceConfigs(),
+    fetchProject()
+  ]);
+  abilityConfigs.value = configRes.data;
+  selectedAbilityId.value = configRes.data[0]?.id ?? '';
+  project.value = projectRes.data;
+
+  const targetsConfig = configRes.data.find(c => c.blockKey === 'targets');
+  const dailyRule = targetsConfig?.behavior?.resetRules?.find(r => r.type === 'daily');
+  const weeklyRule = targetsConfig?.behavior?.resetRules?.find(r => r.type === 'weekly');
+  if (dailyRule?.time) {
+    dailyResetAt.value = dailyRule.time;
+  }
+  if (weeklyRule?.weekday != null) {
+    const dayMap = ['', '一', '二', '三', '四', '五', '六', '日'];
+    weeklyResetDay.value = dayMap[weeklyRule.weekday] ?? '一';
+  }
+
+  const activityConfig = configRes.data.find(c => c.blockKey === 'version_activity');
+  if (activityConfig?.behavior?.reminderRules?.length) {
+    const rule = activityConfig.behavior.reminderRules[0];
+    if (rule.beforeMinutes?.length) {
+      const mins = rule.beforeMinutes[0];
+      if (mins >= 1440) {
+        versionReminder.value = `提前 ${Math.round(mins / 1440)} 天`;
+      } else {
+        versionReminder.value = `提前 ${mins} 分钟`;
+      }
+    }
+  }
 });
 </script>
 
@@ -437,10 +481,10 @@ onMounted(async () => {
 
     <div class="nikki-config-page">
       <LifeGeminiProjectHero
-        title="无限暖暖"
-        description="记录游戏日常、活动、版本与养成进度，管理账号与相关资源。"
-        :cover-src="coverUrl"
-        cover-alt="无限暖暖项目封面"
+        :title="project.name"
+        :description="project.description || '记录游戏日常、活动、版本与养成进度，管理账号与相关资源。'"
+        :cover-src="project.coverSrc || coverUrl"
+        :cover-alt="project.coverAlt || '无限暖暖项目封面'"
         :tags="projectTags"
         :stats="projectHeroStats"
       >
@@ -684,16 +728,16 @@ onMounted(async () => {
         <LifeGeminiCard class="config-card basic-card" title="基本信息">
           <dl class="info-list">
             <dt>项目名称</dt>
-            <dd>无限暖暖</dd>
+            <dd>{{ project.name }}</dd>
             <dt>项目类型</dt>
             <dd>游戏项目</dd>
             <dt>状态</dt>
-            <dd><span class="status-dot"></span>进行中</dd>
+            <dd><span class="status-dot"></span>{{ project.status === 'active' ? '进行中' : project.status === 'paused' ? '已暂停' : '已归档' }}</dd>
             <dt>简介</dt>
-            <dd>记录日常任务、活动提醒、版本更新、抽卡计划、搭配笔记等内容。</dd>
+            <dd>{{ project.description || '记录日常任务、活动提醒、版本更新、抽卡计划、搭配笔记等内容。' }}</dd>
             <dt>封面</dt>
             <dd class="cover-edit">
-              <img :src="coverUrl" alt="无限暖暖封面缩略图" />
+              <img :src="project.coverSrc || coverUrl" alt="无限暖暖封面缩略图" />
               <button type="button" @click="success('封面已更新', '已应用当前演示封面')">更换封面</button>
             </dd>
             <dt>标签</dt>

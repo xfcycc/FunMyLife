@@ -1,3 +1,18 @@
+<script setup lang="ts">
+defineOptions({
+  name: 'LifeGeminiCard'
+});
+
+defineProps<{
+  title?: string;
+  actionText?: string;
+}>();
+
+defineEmits<{
+  action: [];
+}>();
+</script>
+
 <template>
   <article class="bg-white rounded-3xl p-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100">
     <div class="flex justify-between items-center mb-4">
@@ -20,18 +35,3 @@
     <slot />
   </article>
 </template>
-
-<script setup lang="ts">
-defineOptions({
-  name: 'LifeGeminiCard'
-});
-
-defineProps<{
-  title?: string;
-  actionText?: string;
-}>();
-
-defineEmits<{
-  action: [];
-}>();
-</script>

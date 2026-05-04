@@ -322,7 +322,7 @@ function scrollList(target: 'route' | 'photo' | 'activity', direction: 'left' | 
           <button
             v-for="item in dateFilters"
             :key="item"
-            :class="['min-h-7 rounded-md text-xs border-0 cursor-pointer transition-colors', item === activeDate ? 'bg-white text-indigo-500 shadow-sm' : 'bg-transparent text-slate-500']"
+            class="min-h-7 rounded-md text-xs border-0 cursor-pointer transition-colors" :class="[item === activeDate ? 'bg-white text-indigo-500 shadow-sm' : 'bg-transparent text-slate-500']"
             type="button"
             @click="switchDate(item)"
           >
@@ -333,7 +333,7 @@ function scrollList(target: 'route' | 'photo' | 'activity', direction: 'left' | 
           <div
             v-for="item in filteredSchedule"
             :key="item.id"
-            :class="['grid items-start gap-2', item.checked ? 'opacity-70' : '']"
+            class="grid items-start gap-2" :class="[item.checked ? 'opacity-70' : '']"
             style="grid-template-columns: 40px 8px minmax(0,1fr) auto 22px"
           >
             <time class="text-xs text-slate-400">{{ item.time }}</time>
@@ -395,7 +395,7 @@ function scrollList(target: 'route' | 'photo' | 'activity', direction: 'left' | 
               <button
                 v-for="item in checklistGroups"
                 :key="item"
-                :class="['min-h-6 rounded-md text-xs border-0 cursor-pointer', item === activeChecklist ? 'bg-white text-indigo-500 shadow-sm' : 'bg-transparent text-slate-500']"
+                class="min-h-6 rounded-md text-xs border-0 cursor-pointer" :class="[item === activeChecklist ? 'bg-white text-indigo-500 shadow-sm' : 'bg-transparent text-slate-500']"
                 type="button"
                 @click="switchChecklist(item)"
               >
@@ -406,11 +406,11 @@ function scrollList(target: 'route' | 'photo' | 'activity', direction: 'left' | 
               v-for="item in visibleChecklist"
               :key="item.id"
               type="button"
-              :class="['flex justify-between w-full p-0 border-0 bg-transparent text-left text-xs cursor-pointer', item.done ? 'text-emerald-500' : 'text-slate-600']"
+              class="flex justify-between w-full p-0 border-0 bg-transparent text-left text-xs cursor-pointer" :class="[item.done ? 'text-emerald-500' : 'text-slate-600']"
               @click="toggleChecklist(item)"
             >
               <span class="flex items-center">
-                <span :class="['w-2 h-2 rounded-full mr-2', item.done ? 'bg-emerald-400' : 'bg-slate-200']"></span>
+                <span class="w-2 h-2 rounded-full mr-2" :class="[item.done ? 'bg-emerald-400' : 'bg-slate-200']"></span>
                 {{ item.title }}
               </span>
               <span class="text-[10px]">{{ item.done ? '完成' : '待办' }}</span>
@@ -513,7 +513,7 @@ function scrollList(target: 'route' | 'photo' | 'activity', direction: 'left' | 
           <button
             v-for="(item, index) in weatherCities"
             :key="item.name"
-            :class="['flex-1 min-h-7 rounded-md text-xs border-0 cursor-pointer transition-colors', index === weatherIndex ? 'bg-white text-indigo-500 shadow-sm' : 'bg-transparent text-slate-500']"
+            class="flex-1 min-h-7 rounded-md text-xs border-0 cursor-pointer transition-colors" :class="[index === weatherIndex ? 'bg-white text-indigo-500 shadow-sm' : 'bg-transparent text-slate-500']"
             type="button"
             @click="switchWeather(index)"
           >

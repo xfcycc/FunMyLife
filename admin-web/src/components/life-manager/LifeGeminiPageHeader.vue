@@ -1,3 +1,33 @@
+<script setup lang="ts">
+import type { RouteKey } from '@elegant-router/types';
+import { useRouterPush } from '@/hooks/common/router';
+import LifeGeminiTopActions from './LifeGeminiTopActions.vue';
+import type { LifeGeminiBreadcrumbItem } from './types';
+
+defineOptions({
+  name: 'LifeGeminiPageHeader'
+});
+
+withDefaults(
+  defineProps<{
+    title?: string;
+    description?: string;
+    breadcrumbs?: LifeGeminiBreadcrumbItem[];
+  }>(),
+  {
+    title: '',
+    description: '',
+    breadcrumbs: () => []
+  }
+);
+
+const { routerPushByKey } = useRouterPush();
+
+function navigateByRouteKey(routeKey: RouteKey) {
+  routerPushByKey(routeKey);
+}
+</script>
+
 <template>
   <header class="min-h-20 px-8 pt-5 pb-4 shrink-0">
     <div class="flex items-start justify-between gap-6">
@@ -28,33 +58,3 @@
     </div>
   </header>
 </template>
-
-<script setup lang="ts">
-import type { RouteKey } from '@elegant-router/types';
-import { useRouterPush } from '@/hooks/common/router';
-import LifeGeminiTopActions from './LifeGeminiTopActions.vue';
-import type { LifeGeminiBreadcrumbItem } from './types';
-
-defineOptions({
-  name: 'LifeGeminiPageHeader'
-});
-
-withDefaults(
-  defineProps<{
-    title?: string;
-    description?: string;
-    breadcrumbs?: LifeGeminiBreadcrumbItem[];
-  }>(),
-  {
-    title: '',
-    description: '',
-    breadcrumbs: () => []
-  }
-);
-
-const { routerPushByKey } = useRouterPush();
-
-function navigateByRouteKey(routeKey: RouteKey) {
-  routerPushByKey(routeKey);
-}
-</script>

@@ -1,3 +1,35 @@
+<script setup lang="ts">
+import { Bell, Plus, Search } from 'lucide-vue-next';
+
+defineOptions({
+  name: 'LifeGeminiTopActions'
+});
+
+withDefaults(
+  defineProps<{
+    backText?: string;
+    createText?: string;
+    searchLabel?: string;
+    notificationLabel?: string;
+    showNotificationDot?: boolean;
+  }>(),
+  {
+    backText: '',
+    createText: '新建',
+    searchLabel: '搜索',
+    notificationLabel: '查看提醒',
+    showNotificationDot: true
+  }
+);
+
+defineEmits<{
+  search: [];
+  notification: [];
+  back: [];
+  create: [];
+}>();
+</script>
+
 <template>
   <div class="flex items-center space-x-4">
     <button
@@ -35,35 +67,3 @@
     </button>
   </div>
 </template>
-
-<script setup lang="ts">
-import { Bell, Plus, Search } from 'lucide-vue-next';
-
-defineOptions({
-  name: 'LifeGeminiTopActions'
-});
-
-withDefaults(
-  defineProps<{
-    backText?: string;
-    createText?: string;
-    searchLabel?: string;
-    notificationLabel?: string;
-    showNotificationDot?: boolean;
-  }>(),
-  {
-    backText: '',
-    createText: '新建',
-    searchLabel: '搜索',
-    notificationLabel: '查看提醒',
-    showNotificationDot: true
-  }
-);
-
-defineEmits<{
-  search: [];
-  notification: [];
-  back: [];
-  create: [];
-}>();
-</script>

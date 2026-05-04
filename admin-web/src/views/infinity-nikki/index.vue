@@ -7,6 +7,7 @@ import LifeGeminiShell from '@/components/life-manager/LifeGeminiShell.vue';
 import LifeGeminiTabs from '@/components/life-manager/LifeGeminiTabs.vue';
 import LifeModal from '@/components/life-manager/LifeModal.vue';
 import { useRouterPush } from '@/hooks/common/router';
+import { infinityNikkiSchemeTemplate } from '@/constants/life-manager/schemes';
 import type {
   AiOverview,
   AssetOverview,
@@ -201,6 +202,39 @@ function getAbilityConfig(blockKey: AbilityBlockKey) {
   return abilityConfigs.value.find(config => config.blockKey === blockKey);
 }
 
+const timelineRuleMap = new Map(
+  infinityNikkiSchemeTemplate.timelineRules.map(rule => [`${rule.sourceBlockKey}:${rule.event}`, rule])
+);
+
+function resolveTimelineRule(blockKey: AbilityBlockKey, eventType: TimelineEvent['type']) {
+  const rule = timelineRuleMap.get(`${blockKey}:${eventType}`);
+  if (rule) {
+    return {
+      mode: rule.writeMode,
+      displayInOverview: rule.displayInOverview,
+      aiReadable: rule.aiReadable,
+      requireConfirm: rule.requireConfirm ?? false
+    };
+  }
+
+  const blockConfig = getAbilityConfig(blockKey);
+  return blockConfig?.timeline?.defaultWriteRule ?? null;
+}
+
+function appendTimelineByRule(event: Omit<TimelineEvent, 'displayInOverview' | 'aiReadable'> & { displayInOverview?: boolean; aiReadable?: boolean }) {
+  const rule = resolveTimelineRule(event.sourceBlockKey, event.type);
+  if (!rule || rule.mode === 'none') {
+    return;
+  }
+
+  timelineEvents.value = [{
+    ...event,
+    displayInOverview: event.displayInOverview ?? rule.displayInOverview,
+    aiReadable: event.aiReadable ?? rule.aiReadable
+  }, ...timelineEvents.value];
+  patchTimelineSummaries(timelineEvents.value);
+}
+
 // ========== 事件处理 ==========
 
 function patchTargetSummaries(targets: GameTarget[]) {
@@ -322,7 +356,7 @@ function handleCreateGameTarget(target: GameTarget) {
     });
   }
   patchTargetSummaries(gameTargets.value);
-  handleAppendTimeline({
+  appendTimelineByRule({
     id: `target-created-${Date.now()}`,
     projectId: target.projectId,
     occurredAt: new Date().toISOString(),
@@ -331,9 +365,7 @@ function handleCreateGameTarget(target: GameTarget) {
     description: target.title,
     sourceBlockKey: 'targets',
     targetId: target.id,
-    sensitivity: 'normal',
-    displayInOverview: target.timelineRule.displayInOverview,
-    aiReadable: target.timelineRule.aiReadable
+    sensitivity: 'normal'
   });
   message.success('目标已添加');
 }
@@ -359,7 +391,7 @@ function handleDeleteGameTarget(targetId: string) {
   });
   patchTargetSummaries(gameTargets.value);
   if (target) {
-    handleAppendTimeline({
+    appendTimelineByRule({
       id: `target-deleted-${Date.now()}`,
       projectId: target.projectId,
       occurredAt: new Date().toISOString(),
@@ -370,9 +402,7 @@ function handleDeleteGameTarget(targetId: string) {
       versionId: target.versionId,
       activityId: target.activityId,
       targetId: target.id,
-      sensitivity: 'normal',
-      displayInOverview: false,
-      aiReadable: true
+      sensitivity: 'normal'
     });
   }
   message.success('目标已删除');
@@ -400,7 +430,7 @@ async function handleToggleGameTargetStatus(targetId: string, status: GameTarget
       skipped: 'target_skipped',
       expired: 'target_expired'
     };
-    handleAppendTimeline({
+    appendTimelineByRule({
       id: `target-${status}-${Date.now()}`,
       projectId: originalTarget.projectId,
       occurredAt: new Date().toISOString(),
@@ -411,9 +441,7 @@ async function handleToggleGameTargetStatus(targetId: string, status: GameTarget
       versionId: originalTarget.versionId,
       activityId: originalTarget.activityId,
       targetId: originalTarget.id,
-      sensitivity: 'normal',
-      displayInOverview: originalTarget.timelineRule.displayInOverview && status !== 'archived',
-      aiReadable: originalTarget.timelineRule.aiReadable
+      sensitivity: 'normal'
     });
   }
   const statusTextMap: Record<GameTargetStatus, string> = {
@@ -464,7 +492,7 @@ function handleCreateGameActivity(activity: GameActivity) {
     };
   });
   patchActivitySummaries(gameActivities.value);
-  handleAppendTimeline({
+  appendTimelineByRule({
     id: `activity-created-${Date.now()}`,
     projectId: activity.projectId,
     occurredAt: new Date().toISOString(),
@@ -474,9 +502,7 @@ function handleCreateGameActivity(activity: GameActivity) {
     sourceBlockKey: 'version_activity',
     versionId: activity.versionId,
     activityId: activity.id,
-    sensitivity: 'normal',
-    displayInOverview: true,
-    aiReadable: true
+    sensitivity: 'normal'
   });
   message.success('活动已添加');
 }
@@ -515,7 +541,7 @@ function handleArchiveGameActivity(activityId: string) {
   });
   patchActivitySummaries(gameActivities.value);
   if (archivedActivity) {
-    handleAppendTimeline({
+    appendTimelineByRule({
       id: `activity-archived-${Date.now()}`,
       projectId: archivedActivity.projectId,
       occurredAt: archivedAt,
@@ -525,9 +551,7 @@ function handleArchiveGameActivity(activityId: string) {
       sourceBlockKey: 'version_activity',
       versionId: archivedActivity.versionId,
       activityId: archivedActivity.id,
-      sensitivity: 'normal',
-      displayInOverview: true,
-      aiReadable: true
+      sensitivity: 'normal'
     });
   }
   message.success('活动已归档');
@@ -574,7 +598,7 @@ function handleArchiveGameVersion(versionId: string) {
   patchTargetSummaries(gameTargets.value);
   patchActivitySummaries(gameActivities.value);
   if (archivedVersion) {
-    handleAppendTimeline({
+    appendTimelineByRule({
       id: `version-archived-${Date.now()}`,
       projectId: archivedVersion.projectId,
       occurredAt: archivedAt,
@@ -583,9 +607,7 @@ function handleArchiveGameVersion(versionId: string) {
       description: `汇总 ${relatedActivities.length} 个活动和 ${relatedTargets.length} 个目标，作为下个版本前的回顾记录。`,
       sourceBlockKey: 'version_activity',
       versionId: archivedVersion.id,
-      sensitivity: 'normal',
-      displayInOverview: true,
-      aiReadable: true
+      sensitivity: 'normal'
     });
   }
   message.success('版本已归档');
@@ -772,13 +794,30 @@ function handleOpenDetail(payload: { type: string; id: string }) {
   } else if (type === 'gameActivity') {
     const activity = gameActivities.value.find(item => item.id === id);
     if (activity) {
+      const relatedTargets = gameTargets.value.filter(t => activity.targetIds.includes(t.id));
+      const relatedPhotos = galleryData.value.recentPhotos.filter(p => activity.photoIds?.includes(p.id));
+      const relatedNotes = noteData.value.notes.filter(n => activity.noteIds?.includes(n.id));
+
       detailModal.title = activity.title;
       detailModal.content = activity.description ?? '';
       detailModal.meta = [
         { label: '开始时间', value: activity.startAt },
         { label: '结束时间', value: activity.endAt },
-        { label: '状态', value: activity.status },
-        { label: '关联目标', value: `${activity.targetIds.length} 个` }
+        { label: '状态', value: activity.status }
+      ];
+      detailModal.sections = [
+        {
+          title: `关联目标（${relatedTargets.length}）`,
+          items: relatedTargets.map(t => ({ label: t.title, status: t.status }))
+        },
+        {
+          title: `截图（${relatedPhotos.length}）`,
+          items: relatedPhotos.map(p => ({ label: p.caption ?? '照片' }))
+        },
+        {
+          title: `笔记（${relatedNotes.length}）`,
+          items: relatedNotes.map(n => ({ label: n.title }))
+        }
       ];
       detailModal.show = true;
     }
@@ -815,8 +854,7 @@ function handleSettings() {
 }
 
 function handleAppendTimeline(event: TimelineEvent) {
-  timelineEvents.value = [event, ...timelineEvents.value];
-  patchTimelineSummaries(timelineEvents.value);
+  appendTimelineByRule(event);
 }
 
 function handleQuickRecordConfirm() {
@@ -833,11 +871,9 @@ function handleQuickRecordConfirm() {
     description: quickRecordContent.value.trim(),
     sourceBlockKey: 'timeline',
     versionId: gameVersions.value.find(version => version.status === 'active')?.id,
-    sensitivity: 'normal',
-    displayInOverview: true,
-    aiReadable: true
+    sensitivity: 'normal'
   };
-  handleAppendTimeline(newEvent);
+  appendTimelineByRule(newEvent);
   message.success('记录已保存');
   quickRecordContent.value = '';
   showQuickRecord.value = false;
@@ -1036,6 +1072,22 @@ onMounted(() => {
         <div v-for="meta in detailModal.meta" :key="meta.label" class="meta-row">
           <span class="meta-label">{{ meta.label }}</span>
           <span class="meta-value">{{ meta.value }}</span>
+        </div>
+      </div>
+      <div v-if="detailModal.sections?.length" class="mt-4 space-y-3">
+        <div v-for="section in detailModal.sections" :key="section.title">
+          <p class="text-xs font-medium text-slate-500 mb-2">{{ section.title }}</p>
+          <div v-if="section.items.length" class="space-y-1.5">
+            <div
+              v-for="(item, idx) in section.items"
+              :key="idx"
+              class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs"
+            >
+              <span class="text-slate-700 truncate">{{ item.label }}</span>
+              <span v-if="item.status" class="shrink-0 text-[10px] text-slate-400 ml-2">{{ item.status }}</span>
+            </div>
+          </div>
+          <p v-else class="text-xs text-slate-400">暂无</p>
         </div>
       </div>
     </LifeModal>

@@ -1,3 +1,20 @@
+<script setup lang="ts">
+import type { LifeGeminiProjectStat, LifeGeminiProjectTag } from './types';
+
+defineOptions({
+  name: 'LifeGeminiProjectHero'
+});
+
+defineProps<{
+  title: string;
+  description: string;
+  coverSrc: string;
+  coverAlt?: string;
+  tags: LifeGeminiProjectTag[];
+  stats: LifeGeminiProjectStat[];
+}>();
+</script>
+
 <template>
   <section class="bg-white rounded-[2rem] p-4 flex flex-col xl:flex-row gap-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-slate-100 mb-6">
     <div class="w-full xl:w-80 h-48 rounded-[1.5rem] overflow-hidden relative shrink-0">
@@ -16,8 +33,7 @@
             <span
               v-for="tag in tags"
               :key="tag.label"
-              :class="[
-                'px-2.5 py-1 rounded-md text-xs font-medium flex items-center',
+              class="px-2.5 py-1 rounded-md text-xs font-medium flex items-center" :class="[
                 tag.tone === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600'
               ]"
             >
@@ -42,20 +58,3 @@
     </div>
   </section>
 </template>
-
-<script setup lang="ts">
-import type { LifeGeminiProjectStat, LifeGeminiProjectTag } from './types';
-
-defineOptions({
-  name: 'LifeGeminiProjectHero'
-});
-
-defineProps<{
-  title: string;
-  description: string;
-  coverSrc: string;
-  coverAlt?: string;
-  tags: LifeGeminiProjectTag[];
-  stats: LifeGeminiProjectStat[];
-}>();
-</script>

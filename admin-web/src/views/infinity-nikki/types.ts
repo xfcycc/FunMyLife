@@ -160,11 +160,17 @@ export interface DetailModalData {
   icon: string;
   meta: DetailMeta[];
   content?: string;
+  sections?: DetailSection[];
 }
 
 export interface DetailMeta {
   label: string;
   value: string;
+}
+
+export interface DetailSection {
+  title: string;
+  items: { label: string; status?: string }[];
 }
 
 // ========== 游戏闭环模型 ==========
@@ -366,8 +372,8 @@ export interface TimelineEvent {
   activityId?: string;
   targetId?: string;
   sensitivity: 'normal' | 'private';
-  displayInOverview: boolean;
-  aiReadable: boolean;
+  displayInOverview?: boolean;
+  aiReadable?: boolean;
 }
 
 /** 重置规则 */
