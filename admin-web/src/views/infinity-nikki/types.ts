@@ -278,6 +278,7 @@ export interface AbilityInstanceConfig {
   blockKey: AbilityBlockKey;
   displayName: string;
   enabled: boolean;
+  capabilities: string[];
   navigation: {
     visible: boolean;
     order: number;

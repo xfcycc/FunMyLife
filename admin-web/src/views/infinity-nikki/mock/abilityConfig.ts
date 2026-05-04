@@ -34,6 +34,7 @@ function toAbilityConfig(block: SchemeBlockInstance): AbilityInstanceConfig {
     blockKey: block.blockKey as AbilityBlockKey,
     displayName: block.displayName,
     enabled: block.enabled,
+    capabilities: block.capabilities,
     navigation: block.navigation,
     summaryRules: (block.summaryRules ?? []).map(toOverviewSummaryRule),
     ...(block.fields ? { fields: block.fields as FieldConfig[] } : {}),

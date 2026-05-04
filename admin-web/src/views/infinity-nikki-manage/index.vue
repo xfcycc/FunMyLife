@@ -11,14 +11,15 @@ import type { LifeGeminiProjectStat, LifeGeminiProjectTag } from '@/components/l
 import { useLifeToast } from '@/hooks/business/lifeFeedback';
 import { useRouterPush } from '@/hooks/common/router';
 import { fetchAbilityInstanceConfigs, saveAbilityInstanceConfigs } from '../infinity-nikki/service';
-import type { AbilityBlockKey, AbilityInstanceConfig, OverviewSummaryRule, TimelineWriteRule } from '../infinity-nikki/types';
+import type { AbilityBlockKey, AbilityInstanceConfig, ArchiveRule, OverviewSummaryRule, TimelineWriteRule } from '../infinity-nikki/types';
 
 defineOptions({
   name: 'InfinityNikkiManage'
 });
 
-type TabLabel = '基础信息' | '日常模板' | '提醒规则' | '资产关联' | '图册同步' | 'AI 设置';
+type TabLabel = '功能块实例' | '概览摘要' | '时间轴规则' | '归档规则' | '基础信息' | '自动化集成';
 type Tone = 'indigo' | 'orange' | 'rose' | 'amber' | 'emerald' | 'purple' | 'blue' | 'slate' | 'pink';
+type ArchiveFlagKey = 'includeTargets' | 'includePhotos' | 'includeNotes' | 'generateTimelineSummary';
 
 interface StatItem {
   label: string;
@@ -68,7 +69,7 @@ const { toasts, removeToast, success, info, warning } = useLifeToast();
 const { routerPushByKey } = useRouterPush();
 
 const coverUrl = 'https://images.unsplash.com/photo-1614088921132-15949673da0e?auto=format&fit=crop&w=360&q=80';
-const activeTab = ref<TabLabel>('基础信息');
+const activeTab = ref<TabLabel>('功能块实例');
 const dailyResetAt = ref('04:00');
 const weeklyResetDay = ref('一');
 const versionReminder = ref('提前 1 天 09:00');
@@ -80,7 +81,7 @@ const modalDescription = ref('当前为演示配置流程，后续可接入真�
 const abilityConfigs = ref<AbilityInstanceConfig[]>([]);
 const selectedAbilityId = ref('');
 
-const tabs = ['基础信息', '日常模板', '提醒规则', '资产关联', '图册同步', 'AI 设置'] satisfies TabLabel[];
+const tabs = ['功能块实例', '概览摘要', '时间轴规则', '归档规则', '基础信息', '自动化集成'] satisfies TabLabel[];
 
 const projectTags: LifeGeminiProjectTag[] = [
   { label: '游戏项目' },
@@ -212,10 +213,68 @@ const timelineModeLabelMap: Record<TimelineWriteRule['mode'], string> = {
   exception_only: '只记异常'
 };
 
+const summaryDisplayModeLabelMap: Record<OverviewSummaryRule['displayMode'], string> = {
+  metric: '指标',
+  list: '列表',
+  compact: '紧凑',
+  timeline: '时间轴'
+};
+
+const archiveTypeLabelMap: Record<ArchiveRule['type'], string> = {
+  manual: '手动归档',
+  on_activity_end: '活动结束归档',
+  on_version_end: '版本结束归档',
+  after_days: '延迟归档'
+};
+
+const archiveFlagLabelMap: Record<ArchiveFlagKey, string> = {
+  includeTargets: '带上目标记录',
+  includePhotos: '带上图册照片',
+  includeNotes: '带上笔记攻略',
+  generateTimelineSummary: '生成时间轴总结'
+};
+
+const timelineModeOptions = [
+  { value: 'none', label: '不写入' },
+  { value: 'detail', label: '详细记录' },
+  { value: 'daily_summary', label: '每日汇总' },
+  { value: 'weekly_summary', label: '每周汇总' },
+  { value: 'exception_only', label: '只记异常' }
+] satisfies Array<{ value: TimelineWriteRule['mode']; label: string }>;
+
+const archiveFlagOptions = [
+  { key: 'includeTargets', label: '带上目标记录' },
+  { key: 'includePhotos', label: '带上图册照片' },
+  { key: 'includeNotes', label: '带上笔记攻略' },
+  { key: 'generateTimelineSummary', label: '生成时间轴总结' }
+] satisfies Array<{ key: ArchiveFlagKey; label: string }>;
+
+const summarySourceBlockMap: Partial<Record<OverviewSummaryRule['source'], AbilityBlockKey>> = {
+  targets: 'targets',
+  activities: 'version_activity',
+  version: 'version_activity',
+  materials: 'materials',
+  gallery: 'gallery',
+  assets: 'assets',
+  timeline: 'timeline',
+  ai: 'ai'
+};
+
 const enabledAbilityConfigs = computed(() => abilityConfigs.value.filter(config => config.enabled));
 const visibleAbilityConfigs = computed(() => abilityConfigs.value.filter(config => config.enabled && config.navigation.visible));
 const overviewConfig = computed(() => abilityConfigs.value.find(config => config.blockKey === 'overview'));
 const overviewRules = computed<OverviewSummaryRule[]>(() => overviewConfig.value?.summaryRules ?? []);
+const allSummaryRules = computed(() => {
+  return overviewRules.value
+    .map(rule => {
+      const sourceBlockKey = summarySourceBlockMap[rule.source];
+      const sourceConfig = abilityConfigs.value.find(config => config.blockKey === sourceBlockKey);
+      return { config: sourceConfig ?? overviewConfig.value ?? abilityConfigs.value[0], rule };
+    })
+    .filter((entry): entry is { config: AbilityInstanceConfig; rule: OverviewSummaryRule } => Boolean(entry.config));
+});
+const timelineAbilityConfigs = computed(() => abilityConfigs.value.filter(config => config.timeline));
+const archiveAbilityConfigs = computed(() => abilityConfigs.value.filter(config => config.behavior?.archiveRule));
 const selectedAbilityConfig = computed(() => {
   return abilityConfigs.value.find(config => config.id === selectedAbilityId.value) ?? abilityConfigs.value[0];
 });
@@ -240,6 +299,11 @@ function backToProject() {
 function switchTab(label: TabLabel) {
   activeTab.value = label;
   info('管理分区已切换', label);
+}
+
+function selectAbility(config: AbilityInstanceConfig, tab: TabLabel = '功能块实例') {
+  selectedAbilityId.value = config.id;
+  activeTab.value = tab;
 }
 
 function toggleReminder(rule: ReminderRule) {
@@ -280,6 +344,34 @@ async function toggleAbilityTimeline(config: AbilityInstanceConfig) {
 async function toggleSummaryRule(rule: OverviewSummaryRule) {
   rule.enabled = !rule.enabled;
   await persistAbilityConfigState(rule.enabled ? '概览规则已启用' : '概览规则已停用', rule.title);
+}
+
+async function updateTimelineMode(config: AbilityInstanceConfig, mode: TimelineWriteRule['mode']) {
+  if (!config.timeline) {
+    return;
+  }
+
+  config.timeline.defaultWriteRule.mode = mode;
+  await persistAbilityConfigState('时间轴写入模式已更新', `${config.displayName}：${timelineModeLabelMap[mode]}`);
+}
+
+async function toggleTimelineFlag(config: AbilityInstanceConfig, key: 'displayInOverview' | 'aiReadable') {
+  if (!config.timeline) {
+    return;
+  }
+
+  config.timeline.defaultWriteRule[key] = !config.timeline.defaultWriteRule[key];
+  await persistAbilityConfigState('时间轴规则已更新', config.displayName);
+}
+
+async function toggleArchiveFlag(config: AbilityInstanceConfig, key: ArchiveFlagKey) {
+  const archiveRule = config.behavior?.archiveRule;
+  if (!archiveRule) {
+    return;
+  }
+
+  archiveRule[key] = !archiveRule[key];
+  await persistAbilityConfigState('归档规则已更新', `${config.displayName}：${archiveFlagLabelMap[key]}`);
 }
 
 function openDemoModal(title: string, description = '当前为演示配置流程，后续可接入真实表单与接口。') {
@@ -326,9 +418,9 @@ onMounted(async () => {
 <template>
   <LifeGeminiShell
     title="项目配置"
-    description="配置无限暖暖的重置时间、提醒规则、账号资产、图册同步和 AI 自动化。"
+    description="以功能块实例为核心，管理导航显示、概览摘要、时间轴写入和归档规则。"
     :breadcrumbs="[
-      { label: '首页', routeKey: 'home' },
+      { label: '工作台', routeKey: 'home' },
       { label: '项目', routeKey: 'projects' },
       { label: '无限暖暖', routeKey: 'infinity-nikki' },
       { label: '管理' }
@@ -340,9 +432,9 @@ onMounted(async () => {
       <LifeGeminiTopActions
         back-text="返回详情"
         search-label="搜索配置"
-        notification-label="查看提醒"
+        notification-label="查看时间轴规则"
         @search="info('搜索配置', '可继续接入配置项搜索')"
-        @notification="switchTab('提醒规则')"
+        @notification="switchTab('时间轴规则')"
         @back="backToProject"
         @create="openDemoModal('新建配置')"
       />
@@ -371,8 +463,11 @@ onMounted(async () => {
 
       <LifeGeminiTabs v-model="activeTab" :tabs="tabs" />
 
-      <section class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+      <section v-if="activeTab === '功能块实例'" class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <LifeGeminiCard title="功能块实例配置" :action-text="`${visibleAbilityConfigs.length} 个显示在项目导航`">
+          <p class="mb-4 text-sm text-slate-500">
+            这里决定每个功能块在无限暖暖项目里的名称、启停、导航位置和后续规则入口。页面字段不再直接从传统分项设置开始。
+          </p>
           <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div
               v-for="config in abilityConfigs"
@@ -381,7 +476,7 @@ onMounted(async () => {
               :class="{ 'border-indigo-100 bg-indigo-50/40': selectedAbilityConfig?.id === config.id }"
               role="button"
               tabindex="0"
-              @click="selectedAbilityId = config.id"
+              @click="selectAbility(config)"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="flex min-w-0 items-start gap-3">
@@ -410,13 +505,24 @@ onMounted(async () => {
                   {{ config.timeline.enabled ? '关闭时间轴' : '开启时间轴' }}
                 </button>
               </div>
+              <div class="mt-3 flex flex-wrap gap-1.5">
+                <span v-for="capability in config.capabilities.slice(0, 3)" :key="capability" class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                  {{ capability }}
+                </span>
+              </div>
             </div>
           </div>
         </LifeGeminiCard>
 
         <div class="grid gap-5">
-          <LifeGeminiCard :title="selectedAbilityConfig ? `${selectedAbilityConfig.displayName}规则` : '功能块规则'">
+          <LifeGeminiCard :title="selectedAbilityConfig ? `${selectedAbilityConfig.displayName}实例规则` : '功能块规则'">
             <div v-if="selectedAbilityConfig" class="space-y-3 text-xs">
+              <div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                <span class="text-slate-500">导航显示</span>
+                <span class="font-medium text-slate-700">
+                  {{ selectedAbilityConfig.navigation.visible ? `第 ${selectedAbilityConfig.navigation.order} 位` : '不进入导航' }}
+                </span>
+              </div>
               <div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
                 <span class="text-slate-500">字段配置</span>
                 <span class="font-medium text-slate-700">{{ selectedAbilityConfig.fields?.length ?? 0 }} 个字段</span>
@@ -434,8 +540,13 @@ onMounted(async () => {
               <div class="rounded-xl bg-slate-50 px-3 py-2">
                 <span class="text-slate-500">行为规则</span>
                 <p class="mt-1 font-medium text-slate-700">
-                  重置 {{ selectedAbilityConfig.behavior?.resetRules?.length ?? 0 }} 条 · 提醒 {{ selectedAbilityConfig.behavior?.reminderRules?.length ?? 0 }} 条
+                  重置 {{ selectedAbilityConfig.behavior?.resetRules?.length ?? 0 }} 条 · 提醒 {{ selectedAbilityConfig.behavior?.reminderRules?.length ?? 0 }} 条 ·
+                  归档 {{ selectedAbilityConfig.behavior?.archiveRule ? archiveTypeLabelMap[selectedAbilityConfig.behavior.archiveRule.type] : '未配置' }}
                 </p>
+              </div>
+              <div class="rounded-xl bg-slate-50 px-3 py-2">
+                <span class="text-slate-500">底层能力</span>
+                <p class="mt-1 font-medium text-slate-700">{{ selectedAbilityConfig.capabilities.join('、') || '未配置' }}</p>
               </div>
             </div>
           </LifeGeminiCard>
@@ -462,7 +573,119 @@ onMounted(async () => {
         </div>
       </section>
 
-      <section class="top-grid">
+      <section v-if="activeTab === '概览摘要'" class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+        <LifeGeminiCard title="概览摘要规则" :action-text="`${allSummaryRules.length} 条规则`">
+          <p class="mb-4 text-sm text-slate-500">
+            概览页只展示摘要。这里控制每条摘要来自哪个功能块、是否显示、最多展示几条，以及点击后进入哪个 tab。
+          </p>
+          <div class="space-y-3">
+            <button
+              v-for="{ config, rule } in allSummaryRules"
+              :key="`${config.id}-${rule.id}`"
+              class="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white px-4 py-3 text-left transition hover:bg-slate-50"
+              type="button"
+              @click="selectAbility(config, '概览摘要')"
+            >
+              <span class="min-w-0">
+                <strong class="block truncate text-sm text-slate-800">{{ rule.title }}</strong>
+                <small class="mt-1 block text-xs text-slate-500">
+                  来源 {{ config.displayName }} · {{ summaryDisplayModeLabelMap[rule.displayMode] }} · 最多 {{ rule.maxItems }} 条 · 优先级 {{ rule.priority }}
+                </small>
+              </span>
+              <span class="flex shrink-0 items-center gap-2">
+                <em class="rounded-full px-2 py-0.5 text-[10px]" :class="rule.enabled ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'">
+                  {{ rule.enabled ? '显示' : '隐藏' }}
+                </em>
+                <button class="text-action" type="button" @click.stop="toggleSummaryRule(rule)">
+                  {{ rule.enabled ? '隐藏' : '显示' }}
+                </button>
+              </span>
+            </button>
+          </div>
+        </LifeGeminiCard>
+
+        <LifeGeminiCard :title="selectedAbilityConfig ? `${selectedAbilityConfig.displayName}摘要接入` : '摘要接入'">
+          <div v-if="selectedAbilityConfig" class="space-y-3">
+            <div class="rounded-xl bg-slate-50 px-3 py-2 text-xs">
+              <span class="text-slate-500">功能块</span>
+              <p class="mt-1 font-medium text-slate-700">{{ selectedAbilityConfig.displayName }}</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 px-3 py-2 text-xs">
+              <span class="text-slate-500">摘要规则</span>
+              <p class="mt-1 font-medium text-slate-700">{{ selectedAbilityConfig.summaryRules.length }} 条</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 px-3 py-2 text-xs">
+              <span class="text-slate-500">导航入口</span>
+              <p class="mt-1 font-medium text-slate-700">{{ selectedAbilityConfig.navigation.visible ? `显示，第 ${selectedAbilityConfig.navigation.order} 位` : '不显示，仅参与摘要或后台配置' }}</p>
+            </div>
+          </div>
+        </LifeGeminiCard>
+      </section>
+
+      <section v-if="activeTab === '时间轴规则'" class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <LifeGeminiCard v-for="config in timelineAbilityConfigs" :key="config.id" :title="`${config.displayName}时间轴规则`">
+          <div v-if="config.timeline" class="space-y-4">
+            <div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs">
+              <span class="text-slate-500">写入状态</span>
+              <button class="text-action" type="button" @click="toggleAbilityTimeline(config)">
+                {{ config.timeline.enabled ? '已开启，点击关闭' : '已关闭，点击开启' }}
+              </button>
+            </div>
+
+            <div>
+              <p class="mb-2 text-xs text-slate-500">写入模式</p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="mode in timelineModeOptions"
+                  :key="mode.value"
+                  class="rounded-lg border px-3 py-1.5 text-xs"
+                  :class="config.timeline.defaultWriteRule.mode === mode.value ? 'border-indigo-200 bg-indigo-50 text-indigo-600' : 'border-slate-200 bg-white text-slate-500'"
+                  type="button"
+                  @click="updateTimelineMode(config, mode.value)"
+                >
+                  {{ mode.label }}
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs" type="button" @click="toggleTimelineFlag(config, 'displayInOverview')">
+                <span class="text-slate-500">进入概览摘要</span>
+                <em class="font-medium text-slate-700">{{ config.timeline.defaultWriteRule.displayInOverview ? '是' : '否' }}</em>
+              </button>
+              <button class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs" type="button" @click="toggleTimelineFlag(config, 'aiReadable')">
+                <span class="text-slate-500">允许 AI 读取</span>
+                <em class="font-medium text-slate-700">{{ config.timeline.defaultWriteRule.aiReadable ? '是' : '否' }}</em>
+              </button>
+            </div>
+          </div>
+        </LifeGeminiCard>
+      </section>
+
+      <section v-if="activeTab === '归档规则'" class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <LifeGeminiCard v-for="config in archiveAbilityConfigs" :key="config.id" :title="`${config.displayName}归档规则`">
+          <div v-if="config.behavior?.archiveRule" class="space-y-4">
+            <div class="rounded-xl bg-slate-50 px-3 py-2 text-xs">
+              <span class="text-slate-500">归档时机</span>
+              <p class="mt-1 font-medium text-slate-700">{{ archiveTypeLabelMap[config.behavior.archiveRule.type] }}</p>
+            </div>
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                v-for="option in archiveFlagOptions"
+                :key="option.key"
+                class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs"
+                type="button"
+                @click="toggleArchiveFlag(config, option.key)"
+              >
+                <span class="text-slate-500">{{ option.label }}</span>
+                <em class="font-medium text-slate-700">{{ config.behavior.archiveRule[option.key] ? '是' : '否' }}</em>
+              </button>
+            </div>
+          </div>
+        </LifeGeminiCard>
+      </section>
+
+      <section v-if="activeTab === '基础信息'" class="top-grid">
         <LifeGeminiCard class="config-card basic-card" title="基本信息">
           <dl class="info-list">
             <dt>项目名称</dt>
@@ -562,7 +785,7 @@ onMounted(async () => {
         </LifeGeminiCard>
       </section>
 
-      <section class="module-grid">
+      <section v-if="activeTab === '自动化集成'" class="module-grid">
         <LifeGeminiCard class="config-card compact-card" title="日常任务模板">
           <div class="mini-head"><span>类型</span><span>重置</span></div>
           <div class="task-list">
@@ -645,7 +868,7 @@ onMounted(async () => {
         </LifeGeminiCard>
       </section>
 
-      <section class="integration-bar">
+      <section v-if="activeTab === '自动化集成'" class="integration-bar">
         <div class="integration-title">
           <strong>集成与通知</strong>
           <span>将提醒与信息推送到你常用的平台</span>

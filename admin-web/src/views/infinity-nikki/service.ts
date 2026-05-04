@@ -6,6 +6,7 @@ import type {
   AbilityInstanceConfig,
   AiOverview,
   ApiResponse,
+  ArchiveRule,
   AssetOverview,
   GalleryOverview,
   GameActivity,
@@ -17,6 +18,7 @@ import type {
   NikkiProject,
   NoteOverview,
   OverviewSummary,
+  OverviewSummaryRule,
   TimelineEvent
 } from './types';
 import {
@@ -53,6 +55,75 @@ function clone<T>(data: T): T {
   return JSON.parse(JSON.stringify(data)) as T;
 }
 
+function mergeOverviewRules(defaultRules: OverviewSummaryRule[], storedRules?: OverviewSummaryRule[]): OverviewSummaryRule[] {
+  if (!storedRules?.length) {
+    return defaultRules;
+  }
+
+  const storedRuleMap = new Map(storedRules.map(rule => [rule.id, rule]));
+  return defaultRules.map(rule => ({ ...rule, ...storedRuleMap.get(rule.id) }));
+}
+
+function mergeArchiveRule(defaultRule?: ArchiveRule, storedRule?: ArchiveRule): ArchiveRule | undefined {
+  if (!defaultRule) {
+    return storedRule;
+  }
+
+  return storedRule ? { ...defaultRule, ...storedRule } : defaultRule;
+}
+
+function mergeAbilityConfigs(storedConfigs: AbilityInstanceConfig[]): AbilityInstanceConfig[] {
+  const storedConfigMap = new Map(storedConfigs.map(config => [config.id, config]));
+  const storedBlockMap = new Map(storedConfigs.map(config => [config.blockKey, config]));
+
+  return clone(mockAbilityInstanceConfigs).map(defaultConfig => {
+    const storedConfig = storedConfigMap.get(defaultConfig.id) ?? storedBlockMap.get(defaultConfig.blockKey);
+
+    if (!storedConfig) {
+      return defaultConfig;
+    }
+
+    const timeline = defaultConfig.timeline || storedConfig.timeline;
+
+    return {
+      ...defaultConfig,
+      ...storedConfig,
+      capabilities: storedConfig.capabilities ?? defaultConfig.capabilities,
+      navigation: {
+        ...defaultConfig.navigation,
+        ...storedConfig.navigation
+      },
+      fields: storedConfig.fields ?? defaultConfig.fields,
+      summaryRules: mergeOverviewRules(defaultConfig.summaryRules, storedConfig.summaryRules),
+      behavior: {
+        ...defaultConfig.behavior,
+        ...storedConfig.behavior,
+        resetRules: storedConfig.behavior?.resetRules ?? defaultConfig.behavior?.resetRules,
+        reminderRules: storedConfig.behavior?.reminderRules ?? defaultConfig.behavior?.reminderRules,
+        archiveRule: mergeArchiveRule(defaultConfig.behavior?.archiveRule, storedConfig.behavior?.archiveRule)
+      },
+      ...(timeline
+        ? {
+            timeline: {
+              enabled: storedConfig.timeline?.enabled ?? defaultConfig.timeline?.enabled ?? timeline.enabled,
+              defaultWriteRule: {
+                mode: storedConfig.timeline?.defaultWriteRule.mode ?? defaultConfig.timeline?.defaultWriteRule.mode ?? timeline.defaultWriteRule.mode,
+                displayInOverview:
+                  storedConfig.timeline?.defaultWriteRule.displayInOverview ??
+                  defaultConfig.timeline?.defaultWriteRule.displayInOverview ??
+                  timeline.defaultWriteRule.displayInOverview,
+                aiReadable:
+                  storedConfig.timeline?.defaultWriteRule.aiReadable ??
+                  defaultConfig.timeline?.defaultWriteRule.aiReadable ??
+                  timeline.defaultWriteRule.aiReadable
+              }
+            }
+          }
+        : {})
+    };
+  });
+}
+
 function readStoredAbilityConfigs(): AbilityInstanceConfig[] {
   if (typeof window === 'undefined') {
     return clone(mockAbilityInstanceConfigs);
@@ -65,7 +136,7 @@ function readStoredAbilityConfigs(): AbilityInstanceConfig[] {
 
   try {
     const parsed = JSON.parse(raw) as AbilityInstanceConfig[];
-    return Array.isArray(parsed) ? parsed : clone(mockAbilityInstanceConfigs);
+    return Array.isArray(parsed) ? mergeAbilityConfigs(parsed) : clone(mockAbilityInstanceConfigs);
   } catch {
     return clone(mockAbilityInstanceConfigs);
   }
