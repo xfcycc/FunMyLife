@@ -11,9 +11,11 @@
 | 当前内容 | 位置 | 本文处理方式 |
 | --- | --- | --- |
 | 无限暖暖详情页类型 | `admin-web/src/views/infinity-nikki/types.ts` | 保留已有结构，作为第一版 mock 基础 |
-| 日常任务 mock | `admin-web/src/views/infinity-nikki/mock/daily.ts` | 升级为目标系统的一个视角 |
-| 活动倒计时 mock | `admin-web/src/views/infinity-nikki/mock/countdown.ts` | 升级为活动与版本对象 |
-| 最近动态 mock | `admin-web/src/views/infinity-nikki/mock/activities.ts` | 升级为时间轴事件 |
+| 目标系统 mock | `admin-web/src/views/infinity-nikki/mock/gameTargets.ts` | 日常、周常、活动目标和自定义目标的统一来源 |
+| 活动与版本 mock | `admin-web/src/views/infinity-nikki/mock/gameActivities.ts`、`versions.ts` | 活动、版本、倒计时和待归档状态的统一来源 |
+| 素材收集 mock | `admin-web/src/views/infinity-nikki/mock/materials.ts` | 支撑概览摘要、活动归档和后续素材功能块 |
+| 时间轴 mock | `admin-web/src/views/infinity-nikki/mock/timeline.ts` | 替代旧最近动态 |
+| 功能块配置 mock | `admin-web/src/views/infinity-nikki/mock/abilityConfig.ts` | 当前已从方案模板配置派生 |
 | 接口文档 | `docs/infinity-nikki-api.md` | 后续可按本文逐步补充新接口 |
 
 本文先服务前端 mock 和页面演示，不要求第一步就设计数据库表。
@@ -42,7 +44,7 @@
 
 ## 3. 核心对象
 
-第一版建议先定义 7 个核心对象。
+第一版建议先定义 10 个核心对象。
 
 | 对象 | 作用 | 当前已有结构对应 |
 | --- | --- | --- |
@@ -50,6 +52,9 @@
 | `GameVersion` | 当前版本和历史版本 | 当前缺失，部分散落在版本节点 |
 | `GameActivity` | 限时活动容器 | 当前 `EventCountdown` 的上层对象 |
 | `GameTarget` | 日常、周常、活动、自定义目标 | 当前 `DailyTask` / `WeeklyGoal` |
+| `Material` | 素材、套装、兑换道具、收集进度 | 当前 `NikkiMaterial`，API 已有 `/materials` 端点 |
+| `Note` | 笔记、攻略、搭配备注 | 当前 `NikkiNote`，可增加活动或版本归属 |
+| `Asset` | 账号、UID、兑换码、支付凭证、外部链接 | 当前 `NikkiAsset` |
 | `OverviewSummaryRule` | 概览摘要生成规则 | 当前缺失，概览写死 |
 | `AbilityInstanceConfig` | 功能块实例配置 | 当前管理页配置的目标形态 |
 | `TimelineEvent` | 时间轴事件 | 当前 `NikkiActivity` 的升级版 |
@@ -60,12 +65,15 @@
 GameVersion
   -> GameActivity
       -> GameTarget
+      -> Material
+      -> Note
       -> TimelineEvent
 
 NikkiProject
   -> AbilityInstanceConfig
       -> OverviewSummaryRule
       -> TimelineEvent 写入规则
+  -> Asset
 ```
 
 ## 4. 数据模型草案
@@ -92,12 +100,12 @@ interface GameVersion {
 }
 ```
 
-版本承载一段游戏内容周期。当前版本应该进入概览和进行中页；历史版本默认只在时间轴或归档视图里出现。
+版本承载一段游戏内容周期。当前版本应该进入概览和活动与版本页；历史版本默认只在时间轴或归档视图里出现。
 
 ### 4.2 活动
 
 ```ts
-type GameActivityStatus = 'upcoming' | 'active' | 'ending' | 'ended' | 'archived';
+type GameActivityStatus = 'upcoming' | 'active' | 'ending' | 'ended' | 'pending_archive' | 'archived';
 
 interface GameActivity {
   id: string;
@@ -151,13 +159,84 @@ interface GameTarget {
 
 活动目标必须允许关联 `activityId`。如果关联了活动，默认继承活动结束时间作为倒计时来源；如果用户单独设置 `dueAt`，则以目标自己的截止时间作为更细粒度提醒。
 
-### 4.4 摘要规则
+### 4.4 素材收集
+
+```ts
+type MaterialCategory = 'outfit' | 'currency' | 'item' | 'recipe' | 'other';
+
+interface Material {
+  id: string;
+  projectId: string;
+  name: string;
+  category: MaterialCategory;
+  description?: string;
+  currentCount?: number;
+  targetCount?: number;
+  versionId?: string;
+  activityId?: string;
+  targetId?: string;
+  status: 'collecting' | 'completed' | 'archived';
+  timelineRule: TimelineWriteRule;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+素材收集不一定作为独立 tab。第一阶段它进入概览摘要、活动归档和 AI 复盘；后续如果素材玩法变重，再升级为独立功能块 tab。
+
+### 4.5 笔记攻略
+
+```ts
+interface NikkiNote {
+  id: string;
+  projectId: string;
+  title: string;
+  content: string;
+  type: 'note' | 'guide' | 'review';
+  versionId?: string;
+  activityId?: string;
+  targetId?: string;
+  pinnedToOverview?: boolean;
+  timelineRule: TimelineWriteRule;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+笔记攻略第一阶段不作为独立 tab，但它不是没有数据模型。笔记由 `NikkiNote` 承载，可以关联版本、活动或目标；入口先放在概览摘要、活动详情和时间轴中。
+
+### 4.6 账号资产
+
+```ts
+type AssetCategory = 'account' | 'uid' | 'redeem_code' | 'payment' | 'link' | 'other';
+type AssetStatus = 'protected' | 'bound' | 'pending' | 'expired' | 'archived';
+
+interface Asset {
+  id: string;
+  projectId: string;
+  name: string;
+  category: AssetCategory;
+  value?: string;
+  status: AssetStatus;
+  sensitivity: 'normal' | 'sensitive';
+  linkedUrl?: string;
+  expiresAt?: string;
+  notes?: string;
+  timelineRule: TimelineWriteRule;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+账号资产是独立 tab，但敏感字段必须默认保守。概览只展示风险和状态，不展示账号、兑换码、支付凭证等明文。
+
+### 4.7 摘要规则
 
 ```ts
 interface OverviewSummaryRule {
   id: string;
   projectId: string;
-  source: 'targets' | 'activities' | 'version' | 'materials' | 'gallery' | 'timeline' | 'ai';
+  source: 'targets' | 'activities' | 'version' | 'materials' | 'notes' | 'gallery' | 'assets' | 'timeline' | 'ai';
   enabled: boolean;
   title: string;
   maxItems: number;
@@ -183,7 +262,7 @@ interface OverviewSummaryRule {
 活动目标：activity，只显示即将结束活动下的未完成目标
 ```
 
-### 4.5 功能块实例配置
+### 4.8 功能块实例配置
 
 ```ts
 interface AbilityInstanceConfig {
@@ -212,7 +291,7 @@ interface AbilityInstanceConfig {
 
 配置页不应该只有“启用/停用”。每个功能块实例都应该能配置显示名、导航顺序、摘要规则、提醒规则、归档规则和时间轴写入规则。
 
-### 4.6 时间轴事件
+### 4.9 时间轴事件
 
 ```ts
 type TimelineEventType =
@@ -245,7 +324,7 @@ interface TimelineEvent {
 }
 ```
 
-### 4.7 辅助类型
+### 4.10 辅助类型
 
 ```ts
 interface ResetRule {
@@ -304,6 +383,27 @@ interface OverviewSummary {
 }
 ```
 
+待确认收件箱不是无限暖暖项目的内部 tab，但它会接住 AI、外部消息和导入内容产生的候选数据。用户确认后，系统再按 `projectId`、`blockKey` 和建议动作写入目标、笔记、素材、资产或时间轴。
+
+```ts
+type PendingSource = 'ai_extract' | 'feishu_import' | 'webhook' | 'ocr' | 'manual';
+type PendingStatus = 'pending' | 'confirmed' | 'ignored' | 'expired';
+
+interface PendingItem {
+  id: string;
+  projectId?: string;
+  blockKey?: AbilityInstanceConfig['blockKey'];
+  source: PendingSource;
+  title: string;
+  content: string;
+  suggestedAction?: string;
+  status: PendingStatus;
+  rawData?: Record<string, unknown>;
+  confirmedAt?: string;
+  createdAt: string;
+}
+```
+
 当前 `NikkiActivity` 可以迁移为 `TimelineEvent`。旧的 `type: 'task_complete'` 可以映射为 `target_done`，`screenshot_uploaded` 可以映射为 `photo_uploaded`，`version_announcement` 可以映射为 `activity_started` 或版本相关事件。
 
 ## 5. 页面闭环
@@ -343,6 +443,8 @@ AI 建议
 它只看当前版本和当前活动，不看历史归档。它可以展示当前版本、进行中活动、置顶目标、临近结束活动、最近截图和本周重点。
 
 如果第一阶段页面数量要少，进行中页可以暂时不单独做；但数据模型里应保留它的能力，因为它能避免概览页变成大杂烩。
+
+决策：第一阶段不做独立的“进行中页”。其职责由概览页和活动与版本页共同承担：概览页通过“当前版本摘要”和“即将结束活动摘要”看重点，活动与版本页承接更完整的当前版本、活动、倒计时和待归档内容。数据模型中继续保留 `GameVersion` 和 `GameActivity` 的状态字段，后续如果概览承载过重，再拆出进行中页。
 
 ### 5.3 任务页
 
@@ -401,9 +503,9 @@ AI 建议
 
 ### 5.5 配置页
 
-配置页分成项目基础配置和功能块实例配置。
+配置页分成两层。
 
-项目基础配置管理：
+第一层是项目基础配置，管理项目名称、封面、状态、默认提醒渠道、敏感信息策略、AI 是否启用。它对应当前管理页的“基础信息”tab。
 
 ```text
 项目名称
@@ -415,7 +517,9 @@ AI 建议
 AI 是否启用
 ```
 
-功能块实例配置管理：
+第二层是功能块配置，按功能块维度组织，每个功能块管理自己的显示、摘要、提醒、归档、时间轴和 AI 规则。当前第一阶段实现里，管理页仍保留“日常模板、提醒规则、资产关联、图册同步、AI 设置”等业务分区；这些分区不是最终模型，而是功能块实例配置的过渡呈现。后续演进时，应逐步合并为统一的功能块实例配置视图。
+
+功能块实例配置最终需要管理：
 
 ```text
 显示名称
@@ -553,7 +657,7 @@ mock/abilityConfig.ts
 
 第七步，改配置页。
 
-先支持目标系统、活动与版本、时间轴这三个功能块实例配置。
+先让当前业务分区能表达目标系统、活动与版本、时间轴这三个功能块实例的关键规则；第二阶段再合并为统一的功能块实例配置视图。
 
 ## 9. 验收标准
 

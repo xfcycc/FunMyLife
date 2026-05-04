@@ -143,11 +143,23 @@ interface ApiResponse<T> {
 
 新增时间轴记录。页面需支持按天、按周、按版本查看。
 
-## 6. 素材、图册与资产
+## 6. 素材、笔记、图册与资产
 
 `GET /api/life/projects/{projectId}/materials`
 
 返回素材/套装/代币/收集项概览。素材能力默认不一定显示为 tab，但会进入概览摘要、活动归档和 AI 复盘。
+
+`GET /api/life/projects/{projectId}/notes`
+
+返回 `NikkiNote[]`。笔记攻略第一阶段不作为独立 tab，但需要有数据模型和接口，可关联 `versionId`、`activityId`、`targetId`，并按配置写入时间轴。
+
+`POST /api/life/projects/{projectId}/notes`
+
+新增笔记、攻略或复盘。新增后可按 `timelineRule` 生成 `note_created` 时间轴事件。
+
+`PATCH /api/life/projects/{projectId}/notes/{noteId}`
+
+编辑笔记标题、内容、类型、归属版本、归属活动、归属目标和概览置顶规则。
 
 `GET /api/life/projects/{projectId}/gallery`
 

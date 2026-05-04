@@ -6,6 +6,8 @@
 
 它不是数据库表结构，也不是低代码编辑器规格。它是一套设计和描述项目方案的共同格式，用来保证后续新增无限暖暖、原神、日本旅行、家庭保险、人际关系维护等项目时，不再从“每个页面有哪些字段”开始，而是先用同一套语言描述方案。
 
+当前第一版前端试验位于 `admin-web/src/constants/life-manager/schemes/`，包含 `infinityNikki.ts`、`japanTravel.ts`、`types.ts` 等配置文件。这里先用 TypeScript mock 配置验证协议是否能承接真实页面，后续再决定是否迁移到后端方案表或方案文件。
+
 在产品语境里，统一使用“方案”。如果后续对外说“模板”“预设”“社区方案”，都先视为方案的不同呈现方式。
 
 方案模板协议要服务三类对象。
@@ -385,25 +387,114 @@ interface SchemeBlockInstance {
     visible: boolean;
     order: number;
   };
-  fields: SchemeFieldConfig[];
-  behavior: {
+  fields?: SchemeFieldConfig[];
+  behavior?: {
     resetRules?: unknown[];
     reminderRules?: unknown[];
     archiveRule?: unknown;
     statusFlow?: string[];
   };
-  summaryRules: SchemeOverviewRule[];
-  timelineRules: SchemeTimelineRule[];
-  aiRules: {
-    readable: boolean;
-    writableAfterConfirm: boolean;
-    allowedUse: string[];
+  summaryRules?: SchemeOverviewRule[];
+  timeline?: {
+    enabled: boolean;
+    defaultWriteRule: SchemeTimelineWriteRule;
   };
-  security: {
-    sensitivity: 'normal' | 'private' | 'sensitive';
-    maskInOverview: boolean;
-    requireConfirmBeforeExternalWrite: boolean;
-  };
+  aiRules?: SchemeAiRules;
+  security?: SchemeBlockSecurity;
+}
+```
+
+协议中被引用的辅助类型也需要显式定义。第一阶段可以先保持轻量，后续再按真实接口细化。
+
+```ts
+interface SchemeFocusPoint {
+  id: string;
+  title: string;
+  priority: 'high' | 'medium' | 'low';
+  description: string;
+}
+
+interface SchemeCapabilityRef {
+  key: string;
+  name: string;
+  reason: string;
+}
+
+interface SchemeFieldConfig {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'date' | 'select' | 'boolean' | 'progress';
+  required?: boolean;
+  options?: string[];
+}
+
+interface SchemeNavigationItem {
+  blockKey: string;
+  label: string;
+  order: number;
+  visible: boolean;
+}
+
+interface SchemeOverviewRule {
+  id: string;
+  source: string;
+  enabled: boolean;
+  title: string;
+  maxItems: number;
+  priority: number;
+  filters: Record<string, unknown>;
+  displayMode: 'metric' | 'list' | 'compact' | 'timeline';
+  targetTab?: string;
+}
+
+interface SchemeTimelineRule {
+  id: string;
+  sourceBlockKey: string;
+  event: string;
+  writeMode: 'none' | 'detail' | 'daily_summary' | 'weekly_summary' | 'exception_only';
+  displayInOverview: boolean;
+  aiReadable: boolean;
+  requireConfirm?: boolean;
+}
+
+interface SchemeTimelineWriteRule {
+  mode: 'none' | 'detail' | 'daily_summary' | 'weekly_summary' | 'exception_only';
+  displayInOverview: boolean;
+  aiReadable: boolean;
+}
+
+interface SchemeAiRules {
+  readable: boolean;
+  writableAfterConfirm: boolean;
+  allowedUse: string[];
+}
+
+interface SchemeBlockSecurity {
+  sensitivity: 'normal' | 'private' | 'sensitive';
+  maskInOverview: boolean;
+  requireConfirmBeforeExternalWrite: boolean;
+}
+
+interface SchemeManagementSection {
+  id: string;
+  title: string;
+  description: string;
+  source: 'project' | 'block_instance' | 'business';
+  blockKeys?: string[];
+}
+
+interface SchemeSeedData {
+  projectName: string;
+  projectDescription: string;
+  sampleOverviewTitles: string[];
+  sampleTimelineTitles: string[];
+}
+
+interface SchemeSafetyPolicy {
+  sensitiveFields: string[];
+  aiReadableByDefault: boolean;
+  externalWritePolicy: 'confirm_required' | 'disabled' | 'allowed';
+  notes: string[];
 }
 ```
 
