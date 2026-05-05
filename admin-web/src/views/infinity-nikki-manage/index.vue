@@ -328,8 +328,7 @@ async function toggleAiConfig(config: AbilityInstanceConfig) {
 }
 
 async function persistAbilityConfigState(message: string, detail: string) {
-  const res = await saveAbilityInstanceConfigs(abilityConfigs.value);
-  abilityConfigs.value = res.data;
+  abilityConfigs.value = await saveAbilityInstanceConfigs(abilityConfigs.value);
   success(message, detail);
 }
 
@@ -420,15 +419,15 @@ function resetConfig() {
 }
 
 onMounted(async () => {
-  const [configRes, projectRes] = await Promise.all([
+  const [configs, proj] = await Promise.all([
     fetchAbilityInstanceConfigs(),
     fetchProject()
   ]);
-  abilityConfigs.value = configRes.data;
-  selectedAbilityId.value = configRes.data[0]?.id ?? '';
-  project.value = projectRes.data;
+  abilityConfigs.value = configs;
+  selectedAbilityId.value = configs[0]?.id ?? '';
+  project.value = proj;
 
-  const targetsConfig = configRes.data.find(c => c.blockKey === 'targets');
+  const targetsConfig = configs.find(c => c.blockKey === 'targets');
   const dailyRule = targetsConfig?.behavior?.resetRules?.find(r => r.type === 'daily');
   const weeklyRule = targetsConfig?.behavior?.resetRules?.find(r => r.type === 'weekly');
   if (dailyRule?.time) {
@@ -439,7 +438,7 @@ onMounted(async () => {
     weeklyResetDay.value = dayMap[weeklyRule.weekday] ?? '一';
   }
 
-  const activityConfig = configRes.data.find(c => c.blockKey === 'version_activity');
+  const activityConfig = configs.find(c => c.blockKey === 'version_activity');
   if (activityConfig?.behavior?.reminderRules?.length) {
     const rule = activityConfig.behavior.reminderRules[0];
     if (rule.beforeMinutes?.length) {

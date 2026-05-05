@@ -40,6 +40,7 @@ import {
   fetchOverviewSummaries,
   fetchProject,
   fetchTimelineEvents,
+  attachTargetIdsToActivities,
   toggleGameTargetStatus as apiToggleGameTargetStatus,
   updateGameTargetProgress as apiUpdateGameTargetProgress
 } from './service';
@@ -60,7 +61,31 @@ const { routerPushByKey } = useRouterPush();
 // ========== 状态 ==========
 
 const activeTab = ref('概览');
-const fallbackTabs = ['概览', '任务', '活动与版本', '图册', '时间轴', '账号资产'];
+const supportedTabBlockKeys = ['overview', 'targets', 'version_activity', 'gallery', 'timeline', 'assets'] as const;
+type SupportedTabBlockKey = (typeof supportedTabBlockKeys)[number];
+
+const fallbackTabLabelMap: Record<SupportedTabBlockKey, string> = {
+  overview: '概览',
+  targets: '任务',
+  version_activity: '活动与版本',
+  gallery: '图册',
+  timeline: '时间轴',
+  assets: '账号资产'
+};
+
+const tabLabelBlockKeyMap: Record<string, SupportedTabBlockKey> = {
+  概览: 'overview',
+  任务: 'targets',
+  目标: 'targets',
+  活动与版本: 'version_activity',
+  版本与活动: 'version_activity',
+  图册: 'gallery',
+  时间轴: 'timeline',
+  账号资产: 'assets'
+};
+
+const supportedTabBlockKeySet = new Set<AbilityBlockKey>(supportedTabBlockKeys);
+const fallbackTabs = supportedTabBlockKeys.map(blockKey => fallbackTabLabelMap[blockKey]);
 
 const project = ref<NikkiProject>({
   id: '',
@@ -114,11 +139,27 @@ const gameTargets = ref<GameTarget[]>([]);
 const gameVersions = ref<GameVersion[]>([]);
 const gameActivities = ref<GameActivity[]>([]);
 const timelineEvents = ref<TimelineEvent[]>([]);
+const tabLabelByBlockKey = computed(() => {
+  const labelMap = new Map<SupportedTabBlockKey, string>();
+
+  supportedTabBlockKeys.forEach(blockKey => {
+    labelMap.set(blockKey, fallbackTabLabelMap[blockKey]);
+  });
+
+  abilityConfigs.value.forEach(config => {
+    if (supportedTabBlockKeySet.has(config.blockKey)) {
+      const blockKey = config.blockKey as SupportedTabBlockKey;
+      labelMap.set(blockKey, config.displayName || fallbackTabLabelMap[blockKey]);
+    }
+  });
+
+  return labelMap;
+});
 const tabs = computed(() => {
   const visibleTabs = abilityConfigs.value
-    .filter(config => config.enabled && config.navigation.visible)
+    .filter(config => config.enabled && config.navigation.visible && supportedTabBlockKeySet.has(config.blockKey))
     .sort((prev, next) => prev.navigation.order - next.navigation.order)
-    .map(config => config.displayName);
+    .map(config => tabLabelByBlockKey.value.get(config.blockKey as SupportedTabBlockKey) ?? config.displayName);
 
   return visibleTabs.length ? visibleTabs : fallbackTabs;
 });
@@ -140,66 +181,69 @@ const detailModal = reactive<DetailModalData>({
 // ========== 数据获取 ==========
 
 async function fetchProjectData() {
-  const res = await fetchProject();
-  project.value = res.data;
+  project.value = await fetchProject();
 }
 
 async function fetchAssets() {
-  const res = await fetchAssetOverview();
-  assetData.value = res.data;
+  assetData.value = await fetchAssetOverview();
 }
 
 async function fetchNotes() {
-  const res = await fetchNoteOverview();
-  noteData.value = res.data;
+  noteData.value = await fetchNoteOverview();
 }
 
 async function fetchGallery() {
-  const res = await fetchGalleryOverview();
-  galleryData.value = res.data;
+  galleryData.value = await fetchGalleryOverview();
 }
 
 async function fetchMaterials() {
-  const res = await fetchMaterialOverview();
-  materialData.value = res.data;
+  materialData.value = await fetchMaterialOverview();
 }
 
 async function fetchAi() {
-  const res = await fetchAiOverview();
-  aiData.value = res.data;
+  aiData.value = await fetchAiOverview();
 }
 
 async function fetchOverview() {
-  const res = await fetchOverviewSummaries();
-  overviewSummaries.value = res.data;
+  overviewSummaries.value = await fetchOverviewSummaries();
 }
 
 async function fetchAbilityConfigs() {
-  const res = await fetchAbilityInstanceConfigs();
-  abilityConfigs.value = res.data;
-}
-
-async function fetchTargets() {
-  const res = await fetchGameTargets();
-  gameTargets.value = res.data;
+  abilityConfigs.value = await fetchAbilityInstanceConfigs();
 }
 
 async function fetchVersionActivity() {
-  const [versionsRes, activitiesRes] = await Promise.all([
+  const [versions, activities, targets] = await Promise.all([
     fetchGameVersions(),
-    fetchGameActivities()
+    fetchGameActivities(),
+    fetchGameTargets()
   ]);
-  gameVersions.value = versionsRes.data;
-  gameActivities.value = activitiesRes.data;
+  gameVersions.value = versions;
+  gameTargets.value = targets;
+  gameActivities.value = attachTargetIdsToActivities(activities, targets);
 }
 
 async function fetchTimeline() {
-  const res = await fetchTimelineEvents();
-  timelineEvents.value = res.data;
+  timelineEvents.value = await fetchTimelineEvents();
 }
 
 function getAbilityConfig(blockKey: AbilityBlockKey) {
   return abilityConfigs.value.find(config => config.blockKey === blockKey);
+}
+
+function resolveTabLabel(tab: string) {
+  const blockKey =
+    tabLabelBlockKeyMap[tab] ??
+    (supportedTabBlockKeySet.has(tab as AbilityBlockKey) ? (tab as SupportedTabBlockKey) : undefined);
+  return blockKey ? (tabLabelByBlockKey.value.get(blockKey) ?? fallbackTabLabelMap[blockKey]) : tab;
+}
+
+function isActiveTab(blockKey: SupportedTabBlockKey) {
+  return tabLabelBlockKeyMap[activeTab.value] === blockKey || activeTab.value === tabLabelByBlockKey.value.get(blockKey);
+}
+
+function switchTab(tab: string) {
+  activeTab.value = resolveTabLabel(tab);
 }
 
 const timelineRuleMap = new Map(
@@ -890,7 +934,6 @@ onMounted(() => {
   fetchAi();
   fetchAbilityConfigs();
   fetchOverview();
-  fetchTargets();
   fetchVersionActivity();
   fetchTimeline();
 });
@@ -957,7 +1000,7 @@ onMounted(() => {
 
     <!-- 概览 -->
     <OverviewTab
-      v-if="activeTab === '概览'"
+      v-if="isActiveTab('overview')"
       :asset-data="assetData"
       :note-data="noteData"
       :gallery-data="galleryData"
@@ -965,14 +1008,14 @@ onMounted(() => {
       :ai-data="aiData"
       :timeline-events="timelineEvents"
       :overview-summaries="overviewSummaries"
-      @switch-tab="activeTab = $event"
+      @switch-tab="switchTab"
       @refresh-ai="fetchAi"
       @open-detail="handleOpenDetail"
     />
 
     <!-- 任务 -->
     <DailyTab
-      v-if="activeTab === '任务'"
+      v-if="isActiveTab('targets')"
       :game-targets="gameTargets"
       :game-activities="gameActivities"
       :ability-config="getAbilityConfig('targets')"
@@ -985,7 +1028,7 @@ onMounted(() => {
 
     <!-- 活动与版本 -->
     <CountdownTab
-      v-if="activeTab === '活动与版本'"
+      v-if="isActiveTab('version_activity')"
       :game-versions="gameVersions"
       :game-activities="gameActivities"
       :game-targets="gameTargets"
@@ -1000,7 +1043,7 @@ onMounted(() => {
 
     <!-- 图册 -->
     <GalleryTab
-      v-if="activeTab === '图册'"
+      v-if="isActiveTab('gallery')"
       :gallery-data="galleryData"
       :game-versions="gameVersions"
       :game-activities="gameActivities"
@@ -1014,7 +1057,7 @@ onMounted(() => {
 
     <!-- 时间轴 -->
     <TimelineTab
-      v-if="activeTab === '时间轴'"
+      v-if="isActiveTab('timeline')"
       :timeline-events="timelineEvents"
       :game-versions="gameVersions"
       :game-activities="gameActivities"
@@ -1028,7 +1071,7 @@ onMounted(() => {
 
     <!-- 账号资产 -->
     <AssetsTab
-      v-if="activeTab === '账号资产'"
+      v-if="isActiveTab('assets')"
       :asset-data="assetData"
       :ability-config="getAbilityConfig('assets')"
       @create-asset="handleCreateAsset"
