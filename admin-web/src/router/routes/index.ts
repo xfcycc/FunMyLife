@@ -30,13 +30,14 @@ export function createStaticRoutes() {
   };
 }
 
-const dynamicConstantRoutes = [
+const fmlConstantRoutes = [
   {
     name: 'home',
     path: '/life/home',
     component: 'layout.blank$view.home',
     meta: {
       title: 'Life Manager',
+      constant: true,
       icon: 'material-symbols:dashboard-customize-outline-rounded',
       order: 10,
       hideInMenu: true
@@ -48,6 +49,7 @@ const dynamicConstantRoutes = [
     redirect: '/life/home',
     meta: {
       title: 'Life Manager',
+      constant: true,
       hideInMenu: true
     }
   },
@@ -57,6 +59,7 @@ const dynamicConstantRoutes = [
     component: 'layout.blank$view.projects',
     meta: {
       title: '项目管理',
+      constant: true,
       icon: 'material-symbols:folder-outline-rounded',
       order: 11,
       hideInMenu: true
@@ -68,6 +71,7 @@ const dynamicConstantRoutes = [
     component: 'layout.blank$view.infinity-nikki',
     meta: {
       title: '无限暖暖',
+      constant: true,
       icon: 'material-symbols:stadia-controller-outline-rounded',
       order: 12,
       hideInMenu: true
@@ -79,6 +83,7 @@ const dynamicConstantRoutes = [
     component: 'layout.blank$view.infinity-nikki-manage',
     meta: {
       title: '无限暖暖管理',
+      constant: true,
       icon: 'material-symbols:settings-outline-rounded',
       hideInMenu: true,
       activeMenu: 'infinity-nikki'
@@ -90,6 +95,7 @@ const dynamicConstantRoutes = [
     component: 'layout.blank$view.japan-travel',
     meta: {
       title: '日本旅行 2026',
+      constant: true,
       icon: 'material-symbols:flight-takeoff-rounded',
       order: 13,
       hideInMenu: true
@@ -101,6 +107,7 @@ const dynamicConstantRoutes = [
     component: 'layout.blank$view.japan-travel-manage',
     meta: {
       title: '日本旅行管理',
+      constant: true,
       icon: 'material-symbols:travel-explore-rounded',
       hideInMenu: true,
       activeMenu: 'japan-travel'
@@ -190,23 +197,18 @@ const dynamicConstantRoutes = [
   }
 ] as unknown as ElegantRoute[];
 
-/** create routes when the auth route mode is static */
-export function createDynamicRoutes() {
+/** 创建 FML 独立前端需要注册的常量路由 */
+export function createFmlConstantRoutes() {
   const constantRoutes: ElegantConstRoute[] = [];
 
-  const authRoutes: ElegantConstRoute[] = [];
-
-  [...customRoutes, ...dynamicConstantRoutes].forEach(item => {
+  [...customRoutes, ...fmlConstantRoutes].forEach(item => {
     if (item.meta?.constant) {
       constantRoutes.push(item);
-    } else {
-      authRoutes.push(item);
     }
   });
 
   return {
-    constantRoutes,
-    authRoutes
+    constantRoutes
   };
 }
 
