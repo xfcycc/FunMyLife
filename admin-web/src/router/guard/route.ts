@@ -1,9 +1,8 @@
-import type { LocationQueryRaw, RouteLocationNormalized, RouteLocationRaw, Router } from 'vue-router';
+import type { RouteLocationNormalized, RouteLocationRaw, Router } from 'vue-router';
 import type { RouteKey, RoutePath } from '@elegant-router/types';
 import { useAuthStore } from '@/store/modules/auth';
 import { useRouteStore } from '@/store/modules/route';
 import { localStg } from '@/utils/storage';
-import { getRouteName } from '@/router/elegant/transform';
 
 /**
  * create route guard
@@ -31,8 +30,8 @@ export function createRouteGuard(router: Router) {
     const hasRole = authStore.userInfo.roles.some(role => routeRoles.includes(role));
     const hasAuth = authStore.isStaticSuper || !routeRoles.length || hasRole;
 
-    // if it is login route when logged in, then switch to the root page
-    if (to.name === loginRoute && isLogin) {
+    // FML 当前作为本地生活管理应用使用，不再展示登录页；访问 /login 时直接回到根路由。
+    if (to.name === loginRoute) {
       return { name: rootRoute };
     }
 
@@ -41,9 +40,9 @@ export function createRouteGuard(router: Router) {
       return handleRouteSwitch(to, from);
     }
 
-    // the route need login but the user is not logged in, then switch to the login page
+    // 未登录访问受保护的后台页面时，不再跳登录页，统一回到 FML 首页入口。
     if (!isLogin) {
-      return { name: loginRoute, query: { redirect: to.fullPath } };
+      return { name: rootRoute };
     }
 
     // if the user is logged in but does not have authorization, then switch to the 403 page
@@ -94,16 +93,10 @@ async function initRoute(to: RouteLocationNormalized): Promise<RouteLocationRaw 
       return null;
     }
 
-    // if the user is not logged in, then switch to the login page
-    const loginRoute: RouteKey = 'login';
-    const query = getRouteQueryOfLoginRoute(to, routeStore.routeHome);
+    // 未登录访问非公开路由时，不再进入登录流程，统一回到根路由（根路由会跳 FML 首页）。
+    const rootRoute: RouteKey = 'root';
 
-    const location: RouteLocationRaw = {
-      name: loginRoute,
-      query
-    };
-
-    return location;
+    return { name: rootRoute };
   }
 
   if (!routeStore.isInitAuthRoute) {
@@ -157,21 +150,4 @@ function handleRouteSwitch(to: RouteLocationNormalized, from: RouteLocationNorma
 
     return { path: from.fullPath, replace: true, query: from.query, hash: to.hash };
   }
-}
-
-function getRouteQueryOfLoginRoute(to: RouteLocationNormalized, routeHome: RouteKey) {
-  const loginRoute: RouteKey = 'login';
-  const redirect = to.fullPath;
-  const [redirectPath, redirectQuery] = redirect.split('?');
-  const redirectName = getRouteName(redirectPath as RoutePath);
-
-  const isRedirectHome = routeHome === redirectName;
-
-  const query: LocationQueryRaw = to.name !== loginRoute && !isRedirectHome ? { redirect } : {};
-
-  if (isRedirectHome && redirectQuery) {
-    query.redirect = `/?${redirectQuery}`;
-  }
-
-  return query;
 }
