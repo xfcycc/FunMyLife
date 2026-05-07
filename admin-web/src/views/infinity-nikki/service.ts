@@ -139,9 +139,9 @@ function adaptTimelineEvent(raw: any): TimelineEvent {
   };
 }
 
-function adaptAbilityConfig(raw: any): AbilityInstanceConfig {
+function adaptBlockInstanceConfig(raw: any): AbilityInstanceConfig {
   return {
-    id: String(raw.configId),
+    id: String(raw.blockInstanceId),
     projectId: String(raw.projectId),
     blockKey: raw.blockKey,
     displayName: raw.displayName,
@@ -233,9 +233,9 @@ function attachTargetIdsToActivities(activities: GameActivity[], targets: GameTa
   });
 }
 
-function toAbilityConfigBo(config: AbilityInstanceConfig) {
+function toBlockInstanceSaveItem(config: AbilityInstanceConfig) {
   return {
-    configId: Number(config.id) || undefined,
+    blockInstanceId: Number(config.id) || undefined,
     projectId: Number(config.projectId) || Number(PROJECT_ID),
     blockKey: config.blockKey,
     displayName: config.displayName,
@@ -327,18 +327,18 @@ export function fetchTimelineEvents() {
 
 /** 获取功能块实例配置 */
 export function fetchAbilityInstanceConfigs() {
-  return post<any[]>('/life/project/ability-configs/list').then(list => list.map(adaptAbilityConfig));
+  return post<any[]>('/life/project/block-instances/list').then(list => list.map(adaptBlockInstanceConfig));
 }
 
 /** 保存功能块实例配置 */
 export function saveAbilityInstanceConfigs(configs: AbilityInstanceConfig[]) {
-  // 批量保存接口外层携带 projectId，configs 中保留 blockKey 等配置实体字段。
+  // 批量保存接口外层携带 projectId，blockInstances 中保留 blockKey 和能力组合配置。
   return request<void>({
-    url: '/life/project/ability-configs/save-batch',
+    url: '/life/project/block-instances/save-batch',
     method: 'post',
     data: {
       projectId: Number(PROJECT_ID),
-      configs: configs.map(toAbilityConfigBo)
+      blockInstances: configs.map(toBlockInstanceSaveItem)
     }
   }).then(() => fetchAbilityInstanceConfigs());
 }

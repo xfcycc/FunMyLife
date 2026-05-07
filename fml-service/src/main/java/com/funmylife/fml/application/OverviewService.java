@@ -1,9 +1,10 @@
 package com.funmylife.fml.application;
 
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
-import com.funmylife.fml.domain.model.*;
+import com.funmylife.fml.domain.block.BlockInstance;
+import com.funmylife.fml.domain.block.CapabilityRef;
+import com.funmylife.fml.domain.capability.*;
 import com.funmylife.fml.domain.repository.LifeDataRepository;
+import com.funmylife.fml.domain.rule.SummaryRule;
 import com.funmylife.fml.interfaces.vo.LmOverviewSummaryItemVo;
 import com.funmylife.fml.interfaces.vo.LmOverviewSummaryVo;
 import lombok.RequiredArgsConstructor;
@@ -12,286 +13,165 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 /**
- * 概览摘要服务 — 从 lm_ability_config 读取 summaryRules，聚合各表数据生成摘要卡片。
- * 移植自 admin-service 的 LmOverviewServiceImpl，用 Hutool JSON 替代 RuoYi JsonUtils。
+ * 概览摘要应用服务。
+ *
+ * <p>该服务只负责用例编排：读取 overview 功能块实例、读取项目内启用的功能块实例、
+ * 通过 CapabilityRegistry 找到能力实现，再把能力产出的领域摘要转换成前端 VO。</p>
+ *
+ * <p>具体业务摘要不再写在这里的 ruleId switch 中，而是拆到 TargetSystemCapability、
+ * MediaRecordCapability、AssetProfileCapability 等能力类。这样“方案由功能块组成，
+ * 功能块由能力组成”的模型会体现在 Java 接口和实现类上，而不是只体现在配置表字段里。</p>
  */
 @Service
 @RequiredArgsConstructor
 public class OverviewService {
 
     private final LifeDataRepository lifeDataRepository;
+    private final CapabilityRegistry capabilityRegistry;
 
     /**
-     * 获取概览摘要列表
+     * 获取项目概览摘要列表。
      *
-     * 流程：
-     * 1. 查 lm_ability_config 中 blockKey='overview' 的配置行
-     * 2. 解析 summaryRules JSON 数组
-     * 3. 预加载各表数据（targets/activities/materials/photos/assets/timelineEvents）
-     * 4. 按规则 ID 分派到对应的 build* 方法，生成摘要卡片
+     * <p>流程：
+     * 1. 读取 blockKey=overview 的功能块实例，拿到 summaryRules。
+     * 2. 读取项目下所有启用的功能块实例，逐个解析其 capabilities。
+     * 3. 通过 CapabilityRegistry 找到能力实现；如果能力实现 SummaryContributor，就交给它生成摘要。
+     * 4. 汇总能力产出的领域摘要，按 SummaryRule.priority 排序后转换为 VO。</p>
+     *
+     * @param projectId 项目 ID
+     * @return 概览摘要 VO 列表；没有配置或没有启用规则时返回空列表
      */
     public List<LmOverviewSummaryVo> getOverviewSummaries(Long projectId) {
-        LmAbilityConfig config = lifeDataRepository.findAbilityConfig(projectId, "overview");
-
-        List<LmOverviewSummaryVo> summaries = new ArrayList<>();
-        if (config == null) {
-            return summaries;
+        BlockInstance overviewBlock = lifeDataRepository.findBlockInstance(projectId, "overview");
+        if (overviewBlock == null || !overviewBlock.isEnabled()) {
+            return List.of();
         }
 
-        List<JSONObject> rules = parseJsonArray(config.getSummaryRules());
-        if (rules == null || rules.isEmpty()) {
-            return summaries;
+        List<SummaryRule> rules = enabledRules(overviewBlock.getSummaryRules());
+        if (rules.isEmpty()) {
+            return List.of();
         }
 
-        // 预加载所有相关数据，避免在循环中重复查询
-        List<LmGameTarget> targets = queryTargets(projectId);
-        List<LmGameActivity> activities = queryActivities(projectId);
-        List<LmMaterial> materials = queryMaterials(projectId);
-        List<LmPhoto> photos = queryPhotos(projectId);
-        List<LmAsset> assets = queryAssets(projectId);
-        List<LmTimelineEvent> timelineEvents = queryTimelineEvents(projectId);
+        List<CapabilitySummary> summaries = new ArrayList<>();
+        Set<String> handledCapabilityKeys = new HashSet<>();
+        for (BlockInstance blockInstance : enabledBlockInstances(projectId)) {
+            summaries.addAll(buildSummariesByBlockCapability(projectId, blockInstance, rules, handledCapabilityKeys));
+        }
 
-        // 按 priority 排序，逐条构建摘要
-        rules.stream()
-            .filter(this::isEnabled)
-            .sorted(Comparator.comparingInt(rule -> rule.getInt("priority", 99)))
-            .forEach(rule -> {
-                LmOverviewSummaryVo summary = buildSummary(projectId, rule, targets, activities, materials, photos, assets, timelineEvents);
-                if (summary != null) {
-                    summaries.add(summary);
-                }
-            });
+        return summaries.stream()
+            .sorted(Comparator.comparingInt(CapabilitySummary::getPriority))
+            .map(this::toVo)
+            .toList();
+    }
 
+    /**
+     * 根据一个功能块实例引用的能力生成摘要。
+     *
+     * <p>同一个能力可能被多个功能块引用，例如 timeline_review 会被任务、图册、AI 功能块复用。
+     * 概览只需要每个能力贡献一次摘要，所以这里会用 handledCapabilityKeys 去重。</p>
+     */
+    private List<CapabilitySummary> buildSummariesByBlockCapability(Long projectId,
+                                                                    BlockInstance blockInstance,
+                                                                    List<SummaryRule> rules,
+                                                                    Set<String> handledCapabilityKeys) {
+        List<CapabilitySummary> summaries = new ArrayList<>();
+        for (CapabilityRef capabilityRef : blockInstance.getCapabilities()) {
+            if (!isUsable(capabilityRef) || !handledCapabilityKeys.add(capabilityRef.getCapabilityKey().asString())) {
+                continue;
+            }
+
+            capabilityRegistry.find(capabilityRef.getCapabilityKey())
+                .filter(capability -> capability.supports(blockInstance))
+                .filter(SummaryContributor.class::isInstance)
+                .map(SummaryContributor.class::cast)
+                .ifPresent(contributor -> summaries.addAll(contributor.buildSummaries(context(projectId, blockInstance, rules))));
+        }
         return summaries;
     }
 
     /**
-     * 根据规则 ID 分派到对应的构建方法
+     * 查询启用的功能块实例。
+     *
+     * @param projectId 项目 ID
+     * @return 项目内启用的功能块实例列表
      */
-    private LmOverviewSummaryVo buildSummary(Long projectId,
-                                             JSONObject rule,
-                                             List<LmGameTarget> targets,
-                                             List<LmGameActivity> activities,
-                                             List<LmMaterial> materials,
-                                             List<LmPhoto> photos,
-                                             List<LmAsset> assets,
-                                             List<LmTimelineEvent> timelineEvents) {
-        String ruleId = rule.getStr("id", "");
-        int maxItems = rule.getInt("maxItems", 3);
-
-        return switch (ruleId) {
-            case "sum-current-version" -> buildCurrentVersionSummary(projectId, rule);
-            case "sum-today-targets" -> buildTargetSummary(rule, targets, "daily", "targets", maxItems);
-            case "sum-weekly-targets" -> buildTargetSummary(rule, targets, "weekly", "targets", maxItems);
-            case "sum-ending-activities" -> buildEndingActivitySummary(rule, activities, maxItems);
-            case "sum-material-progress" -> buildMaterialSummary(rule, materials, maxItems);
-            case "sum-gallery-recent" -> buildGallerySummary(projectId, rule, photos, maxItems);
-            case "sum-asset-risk" -> buildAssetSummary(rule, assets, maxItems);
-            case "sum-recent-timeline" -> buildTimelineSummary(rule, timelineEvents, maxItems);
-            default -> null;
-        };
+    private List<BlockInstance> enabledBlockInstances(Long projectId) {
+        return lifeDataRepository.findBlockInstances(projectId).stream()
+            .filter(BlockInstance::isEnabled)
+            .toList();
     }
 
-    // ========== 各规则的构建方法 ==========
-
-    /** 当前版本摘要 — 显示活跃版本的名称和标题 */
-    private LmOverviewSummaryVo buildCurrentVersionSummary(Long projectId, JSONObject rule) {
-        LmGameVersion version = lifeDataRepository.findCurrentGameVersion(projectId);
-
-        LmOverviewSummaryVo summary = baseSummary(rule, "version_activity");
-        summary.setValue(version == null ? "暂无当前版本" : version.getName());
-        if (version != null) {
-            summary.setDescription(version.getTitle());
+    /**
+     * 过滤启用的摘要规则。
+     *
+     * @param rules 功能块实例上的摘要规则列表
+     * @return 启用状态的规则列表
+     */
+    private List<SummaryRule> enabledRules(List<SummaryRule> rules) {
+        if (rules == null || rules.isEmpty()) {
+            return List.of();
         }
-        return summary;
+        return rules.stream().filter(SummaryRule::isEnabled).toList();
     }
 
-    /** 目标完成摘要（每日/每周） — 显示 done/total 和未完成条目 */
-    private LmOverviewSummaryVo buildTargetSummary(JSONObject rule,
-                                                   List<LmGameTarget> targets,
-                                                   String type,
-                                                   String targetRoute,
-                                                   int maxItems) {
-        List<LmGameTarget> filteredTargets = targets.stream()
-            .filter(target -> type.equals(target.getType()))
-            .toList();
-        long doneCount = filteredTargets.stream().filter(target -> "done".equals(target.getStatus())).count();
+    /**
+     * 创建能力摘要构建上下文。
+     *
+     * @param projectId 项目 ID
+     * @param blockInstance 当前功能块实例
+     * @param rules overview 功能块上的摘要规则
+     * @return 概览摘要构建上下文
+     */
+    private SummaryBuildContext context(Long projectId, BlockInstance blockInstance, List<SummaryRule> rules) {
+        SummaryBuildContext context = new SummaryBuildContext();
+        context.setProjectId(projectId);
+        context.setBlockInstance(blockInstance);
+        context.setRules(rules);
+        return context;
+    }
 
-        LmOverviewSummaryVo summary = baseSummary(rule, targetRoute);
-        summary.setValue(doneCount + "/" + filteredTargets.size());
-        if ("daily".equals(type)) {
-            summary.setDescription("今日还有 " + (filteredTargets.size() - doneCount) + " 项待完成");
+    /**
+     * 判断功能块能力引用是否可参与本次概览构建。
+     *
+     * @param capabilityRef 功能块中的能力引用
+     * @return true 表示能力 key 有效且引用已启用
+     */
+    private boolean isUsable(CapabilityRef capabilityRef) {
+        return capabilityRef != null && capabilityRef.isEnabled() && capabilityRef.getCapabilityKey() != null;
+    }
+
+    /**
+     * 把领域摘要转换为 Controller 可返回的 VO。
+     *
+     * @param summary 能力贡献的领域摘要
+     * @return 前端概览摘要 VO
+     */
+    private LmOverviewSummaryVo toVo(CapabilitySummary summary) {
+        LmOverviewSummaryVo vo = new LmOverviewSummaryVo();
+        vo.setId(summary.getId());
+        vo.setRuleId(summary.getRuleId());
+        vo.setTitle(summary.getTitle());
+        vo.setValue(summary.getValue());
+        vo.setDescription(summary.getDescription());
+        vo.setTargetRoute(summary.getTargetRoute());
+        if (summary.getItems() != null && !summary.getItems().isEmpty()) {
+            vo.setItems(summary.getItems().stream().map(this::toItemVo).toList());
         }
-        summary.setItems(toItems(filteredTargets.stream()
-            .filter(target -> !"done".equals(target.getStatus()))
-            .limit(maxItems)
-            .map(target -> item(String.valueOf(target.getTargetId()), target.getTitle(), target.getStatus(), targetRoute))
-            .toList()));
-        return summary;
+        return vo;
     }
 
-    /** 即将结束的活动摘要 */
-    private LmOverviewSummaryVo buildEndingActivitySummary(JSONObject rule,
-                                                           List<LmGameActivity> activities,
-                                                           int maxItems) {
-        Set<String> endingStatuses = Set.of("ending", "pending_archive");
-        List<LmGameActivity> endingActivities = activities.stream()
-            .filter(activity -> endingStatuses.contains(activity.getStatus()))
-            .toList();
-
-        LmOverviewSummaryVo summary = baseSummary(rule, "version_activity");
-        summary.setValue(endingActivities.size() + "个");
-        summary.setDescription("优先处理临近结束的活动目标");
-        summary.setItems(toItems(endingActivities.stream()
-            .limit(maxItems)
-            .map(activity -> item(String.valueOf(activity.getActivityId()), activity.getTitle(), activity.getStatus(), "version_activity"))
-            .toList()));
-        return summary;
-    }
-
-    /** 素材收集进度摘要 */
-    private LmOverviewSummaryVo buildMaterialSummary(JSONObject rule,
-                                                     List<LmMaterial> materials,
-                                                     int maxItems) {
-        List<LmMaterial> activeMaterials = materials.stream()
-            .filter(material -> !"archived".equals(material.getStatus()))
-            .toList();
-        long completedCount = activeMaterials.stream().filter(material -> "completed".equals(material.getStatus())).count();
-
-        LmOverviewSummaryVo summary = baseSummary(rule, "targets");
-        summary.setValue(completedCount + "/" + activeMaterials.size());
-        summary.setDescription("套装、素材和代币收集进度");
-        summary.setItems(toItems(activeMaterials.stream()
-            .filter(material -> !"completed".equals(material.getStatus()))
-            .limit(maxItems)
-            .map(material -> item(String.valueOf(material.getMaterialId()), material.getName(), material.getStatus(), "targets"))
-            .toList()));
-        return summary;
-    }
-
-    /** 图册摘要 — 照片数量 + 图册数量 */
-    private LmOverviewSummaryVo buildGallerySummary(Long projectId,
-                                                    JSONObject rule,
-                                                    List<LmPhoto> photos,
-                                                    int maxItems) {
-        LmOverviewSummaryVo summary = baseSummary(rule, "gallery");
-        summary.setValue(photos.size() + "张");
-        summary.setDescription(lifeDataRepository.countAlbums(projectId) + " 个图册");
-        summary.setItems(toItems(photos.stream()
-            .limit(maxItems)
-            .map(photo -> item(String.valueOf(photo.getPhotoId()), photo.getCaption() == null ? "照片记录" : photo.getCaption(), "photo_uploaded", "gallery"))
-            .toList()));
-        return summary;
-    }
-
-    /** 资产风险摘要 — 标记 pending/expired 状态的资产 */
-    private LmOverviewSummaryVo buildAssetSummary(JSONObject rule,
-                                                  List<LmAsset> assets,
-                                                  int maxItems) {
-        Set<String> riskStatuses = Set.of("pending", "expired");
-        List<LmAsset> riskAssets = assets.stream()
-            .filter(asset -> riskStatuses.contains(asset.getStatus()))
-            .toList();
-
-        LmOverviewSummaryVo summary = baseSummary(rule, "assets");
-        summary.setValue(riskAssets.isEmpty() ? "正常" : riskAssets.size() + "个");
-        summary.setDescription(riskAssets.isEmpty() ? "账号资产暂无异常" : "存在待处理或过期资产");
-        summary.setItems(toItems(riskAssets.stream()
-            .limit(maxItems)
-            .map(asset -> item(String.valueOf(asset.getAssetId()), asset.getName(), asset.getStatus(), "assets"))
-            .toList()));
-        return summary;
-    }
-
-    /** 最近时间轴事件摘要 */
-    private LmOverviewSummaryVo buildTimelineSummary(JSONObject rule,
-                                                     List<LmTimelineEvent> timelineEvents,
-                                                     int maxItems) {
-        List<LmTimelineEvent> visibleEvents = timelineEvents.stream()
-            .filter(event -> isTrue(event.getDisplayInOverview()))
-            .toList();
-
-        LmOverviewSummaryVo summary = baseSummary(rule, "timeline");
-        summary.setValue(visibleEvents.size() + "条");
-        summary.setItems(toItems(visibleEvents.stream()
-            .limit(maxItems)
-            .map(event -> item(String.valueOf(event.getEventId()), event.getTitle(), event.getType(), "timeline"))
-            .toList()));
-        return summary;
-    }
-
-    // ========== 工具方法 ==========
-
-    /** 创建摘要基础对象（id、ruleId、title、targetRoute） */
-    private LmOverviewSummaryVo baseSummary(JSONObject rule, String targetRoute) {
-        String ruleId = rule.getStr("id", "");
-        LmOverviewSummaryVo summary = new LmOverviewSummaryVo();
-        summary.setId("overview-" + ruleId);
-        summary.setRuleId(ruleId);
-        summary.setTitle(rule.getStr("title", ""));
-        summary.setTargetRoute(targetRoute);
-        return summary;
-    }
-
-    /** 构建摘要条目 */
-    private LmOverviewSummaryItemVo item(String id, String label, String status, String targetRoute) {
-        LmOverviewSummaryItemVo item = new LmOverviewSummaryItemVo();
-        item.setId(id);
-        item.setLabel(label == null ? "" : label);
-        item.setStatus(status);
-        item.setTargetRoute(targetRoute);
-        return item;
-    }
-
-    /** 空条目按 null 返回，保持前端可选语义 */
-    private List<LmOverviewSummaryItemVo> toItems(List<LmOverviewSummaryItemVo> items) {
-        return items.isEmpty() ? null : items;
-    }
-
-    private List<LmGameTarget> queryTargets(Long projectId) {
-        return lifeDataRepository.findGameTargets(projectId);
-    }
-
-    private List<LmGameActivity> queryActivities(Long projectId) {
-        return lifeDataRepository.findGameActivities(projectId);
-    }
-
-    private List<LmMaterial> queryMaterials(Long projectId) {
-        return lifeDataRepository.findMaterials(projectId);
-    }
-
-    private List<LmPhoto> queryPhotos(Long projectId) {
-        return lifeDataRepository.findPhotos(projectId);
-    }
-
-    private List<LmAsset> queryAssets(Long projectId) {
-        return lifeDataRepository.findAssets(projectId);
-    }
-
-    private List<LmTimelineEvent> queryTimelineEvents(Long projectId) {
-        return lifeDataRepository.findTimelineEvents(projectId);
-    }
-
-    /** 解析 JSON 数组字符串，失败返回 null */
-    private List<JSONObject> parseJsonArray(String json) {
-        if (json == null || json.isBlank()) {
-            return null;
-        }
-        try {
-            return JSONUtil.toList(json, JSONObject.class);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /** 判断规则是否启用（兼容 true/1/Y/布尔值） */
-    private boolean isEnabled(JSONObject rule) {
-        Object enabled = rule.get("enabled");
-        return enabled == null || Boolean.TRUE.equals(enabled) || "1".equals(enabled) || "Y".equals(enabled) || "true".equals(enabled);
-    }
-
-    /** 判断字符串是否为真值（1/Y/true） */
-    private boolean isTrue(String value) {
-        return "1".equals(value) || "Y".equals(value) || "true".equals(value);
+    /**
+     * 把领域摘要明细转换为 VO。
+     *
+     * @param item 能力贡献的摘要明细
+     * @return 前端摘要明细 VO
+     */
+    private LmOverviewSummaryItemVo toItemVo(CapabilitySummaryItem item) {
+        LmOverviewSummaryItemVo vo = new LmOverviewSummaryItemVo();
+        vo.setId(item.getId());
+        vo.setLabel(item.getLabel());
+        vo.setStatus(item.getStatus());
+        vo.setTargetRoute(item.getTargetRoute());
+        return vo;
     }
 }

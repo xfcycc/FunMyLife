@@ -1,8 +1,10 @@
 package com.funmylife.fml.infrastructure.persistence.repository;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.funmylife.fml.domain.block.BlockInstance;
 import com.funmylife.fml.domain.model.*;
 import com.funmylife.fml.domain.repository.LifeDataRepository;
+import com.funmylife.fml.infrastructure.json.BlockInstanceJsonConverter;
 import com.funmylife.fml.infrastructure.persistence.mapper.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -33,6 +35,7 @@ public class MybatisLifeDataRepository implements LifeDataRepository {
     private final LmPhotoMapper photoMapper;
     private final LmAssetMapper assetMapper;
     private final LmNoteMapper noteMapper;
+    private final BlockInstanceJsonConverter blockInstanceJsonConverter;
 
     /** 查询项目基础信息，并把表实体转换为领域模型。 */
     @Override
@@ -42,33 +45,39 @@ public class MybatisLifeDataRepository implements LifeDataRepository {
         return copy(projectMapper.selectOne(lqw), LmProject::new);
     }
 
-    /** 查询项目下全部功能块配置。 */
+    /** 查询项目下全部功能块实例，并把旧表配置转换为新的 BlockInstance 领域对象。 */
     @Override
-    public List<LmAbilityConfig> findAbilityConfigs(Long projectId) {
+    public List<BlockInstance> findBlockInstances(Long projectId) {
         var lqw = Wrappers.lambdaQuery(com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig.class);
         lqw.eq(com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig::getProjectId, projectId);
-        return copyList(abilityConfigMapper.selectList(lqw), LmAbilityConfig::new);
+        return copyList(abilityConfigMapper.selectList(lqw), LmAbilityConfig::new)
+            .stream()
+            .map(blockInstanceJsonConverter::toBlockInstance)
+            .toList();
     }
 
-    /** 查询一个功能块配置，blockKey 对应 overview、targets、gallery 等能力块。 */
+    /** 查询一个功能块实例，blockKey 对应 overview、targets、gallery 等项目内入口。 */
     @Override
-    public LmAbilityConfig findAbilityConfig(Long projectId, String blockKey) {
+    public BlockInstance findBlockInstance(Long projectId, String blockKey) {
         var lqw = Wrappers.lambdaQuery(com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig.class);
         lqw.eq(com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig::getProjectId, projectId);
         lqw.eq(com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig::getBlockKey, blockKey);
-        return copy(abilityConfigMapper.selectOne(lqw), LmAbilityConfig::new);
+        LmAbilityConfig config = copy(abilityConfigMapper.selectOne(lqw), LmAbilityConfig::new);
+        return blockInstanceJsonConverter.toBlockInstance(config);
     }
 
-    /** 插入功能块配置前，把领域模型转换为 MyBatis 表实体。 */
+    /** 插入功能块实例前，把领域模型转换为当前兼容的 lm_ability_config 表实体。 */
     @Override
-    public void insertAbilityConfig(LmAbilityConfig config) {
+    public void insertBlockInstance(BlockInstance blockInstance) {
+        LmAbilityConfig config = blockInstanceJsonConverter.toAbilityConfig(blockInstance);
         var entity = copy(config, com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig::new);
         abilityConfigMapper.insert(entity);
     }
 
-    /** 更新功能块配置前，把领域模型转换为 MyBatis 表实体。 */
+    /** 更新功能块实例前，把领域模型转换为当前兼容的 lm_ability_config 表实体。 */
     @Override
-    public void updateAbilityConfig(LmAbilityConfig config) {
+    public void updateBlockInstance(BlockInstance blockInstance) {
+        LmAbilityConfig config = blockInstanceJsonConverter.toAbilityConfig(blockInstance);
         var entity = copy(config, com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig::new);
         abilityConfigMapper.updateById(entity);
     }

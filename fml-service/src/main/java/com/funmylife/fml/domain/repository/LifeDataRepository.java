@@ -1,6 +1,7 @@
 package com.funmylife.fml.domain.repository;
 
 import com.funmylife.fml.domain.model.*;
+import com.funmylife.fml.domain.block.BlockInstance;
 
 import java.util.List;
 
@@ -16,17 +17,17 @@ public interface LifeDataRepository {
     /** 按项目 ID 查询项目聚合根，未找到返回 null。 */
     LmProject findProjectById(Long projectId);
 
-    /** 查询项目下所有功能块实例配置，用于管理页和详情页动态渲染。 */
-    List<LmAbilityConfig> findAbilityConfigs(Long projectId);
+    /** 查询项目下所有功能块实例，用于管理页和详情页动态渲染。 */
+    List<BlockInstance> findBlockInstances(Long projectId);
 
-    /** 按项目 ID + 功能块 key 查询单个配置，主要用于概览摘要规则加载和 upsert。 */
-    LmAbilityConfig findAbilityConfig(Long projectId, String blockKey);
+    /** 按项目 ID + 功能块 key 查询单个功能块实例，主要用于概览摘要规则加载和 upsert。 */
+    BlockInstance findBlockInstance(Long projectId, String blockKey);
 
-    /** 新增功能块实例配置，入参是领域模型，具体表对象由 infrastructure 负责转换。 */
-    void insertAbilityConfig(LmAbilityConfig config);
+    /** 新增功能块实例，入参是领域模型，具体表对象由 infrastructure 负责转换。 */
+    void insertBlockInstance(BlockInstance blockInstance);
 
-    /** 更新功能块实例配置，保持 application 层不直接依赖 Mapper。 */
-    void updateAbilityConfig(LmAbilityConfig config);
+    /** 更新功能块实例，保持 application 层不直接依赖 Mapper。 */
+    void updateBlockInstance(BlockInstance blockInstance);
 
     /** 查询项目下所有游戏版本。 */
     List<LmGameVersion> findGameVersions(Long projectId);
