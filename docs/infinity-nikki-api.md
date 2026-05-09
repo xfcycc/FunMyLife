@@ -1,64 +1,114 @@
-# 无限暖暖项目详情页接口文档
+# 无限暖暖项目接口文档
 
-本文档描述 `/life/project/infinity-nikki` 与 `/life/project/infinity-nikki/manage` 当前页面所需的接口口径。当前前端仍使用 mock 数据，真实后端接入时应以这里的新模型为准，不再沿用旧的 `daily-tasks`、`countdown`、`notes tab`、`ai tab` 拆法。
+本文档描述 `/life/project/infinity-nikki` 与 `/life/project/infinity-nikki/manage` 当前接入 `fml-service` 的接口口径。
 
-Base URL：`/api/life/projects/{projectId}`
+当前后端已经从 `admin-service` 拆出为独立服务 `fml-service`，默认端口为 `8082`。前端通过 `VITE_SERVICE_BASE_URL` 指向后端，例如本地联调时设置为 `http://localhost:8082`。
+
+## 1. 接口约定
+
+`fml-service` 当前约定：
+
+- 所有 Life Manager 接口使用 `POST + JSON body`。
+- `projectId` 统一放在请求体中，不再出现在 URL path 中。
+- 查询接口也使用 POST，避免同一业务同时维护 GET/path 和 POST/body 两套入参。
+- 响应使用统一 `R<T>` 包装。
+
+通用请求体：
+
+```ts
+interface ProjectScopedRequest {
+  projectId: number;
+}
+```
 
 通用响应：
 
 ```ts
 interface ApiResponse<T> {
   code: number;
-  message: string;
+  msg: string;
   data: T;
 }
 ```
 
-## 1. 项目与功能块配置
+前端当前无限暖暖项目 ID 固定为 `1001`，对应请求体示例：
 
-项目详情页的 tab 来自功能块实例配置，而不是页面硬编码。
+```json
+{
+  "projectId": 1001
+}
+```
 
-`GET /api/life/projects/{projectId}`
+## 2. 已实现接口
 
-返回项目基础信息：名称、描述、封面、状态、标签、统计数据。
+### 2.1 项目基础信息
 
-`GET /api/life/projects/{projectId}/ability-configs`
+`POST /life/project/detail`
 
-返回 `AbilityInstanceConfig[]`。核心字段包括：
+请求体：
+
+```json
+{
+  "projectId": 1001
+}
+```
+
+返回项目基础信息，包含项目名称、描述、封面、状态、方案、标签和统计数据。
+
+### 2.2 功能块实例
+
+`POST /life/project/block-instances/list`
+
+返回项目下全部功能块实例配置。项目详情页的 tab、显示名称、概览摘要、时间轴规则和 AI 规则都应来自功能块实例，而不是页面硬编码。
+
+核心字段：
 
 | 字段 | 说明 |
 | --- | --- |
 | `blockKey` | 功能块类型，如 `overview`、`targets`、`version_activity`、`materials`、`gallery`、`assets`、`timeline`、`ai` |
 | `displayName` | 项目内显示名称 |
-| `enabled` | 是否启用 |
-| `navigation.visible` | 是否显示为项目详情页 tab |
-| `navigation.order` | tab 顺序 |
+| `enabled` | 是否启用，当前返回 `"1"` / `"0"` |
+| `capabilities` | 当前功能块组合的底层能力配置 |
+| `navigation` | 是否进入项目导航、排序和展示规则 |
 | `summaryRules` | 概览摘要规则 |
-| `fields` | 当前功能块实例的字段配置 |
+| `fields` | 字段扩展配置 |
 | `behavior` | 重置、提醒、归档等行为规则 |
-| `timeline` | 是否写入时间轴及默认写入策略 |
+| `timeline` | 时间轴写入策略 |
+| `aiRules` | AI 可读、摘要和建议规则 |
+| `security` | 敏感信息展示和访问规则 |
 
-`PATCH /api/life/projects/{projectId}/ability-configs/{configId}`
+`POST /life/project/block-instances/save-batch`
 
-用于项目管理页修改功能块实例配置。第一阶段至少支持启停、导航显示、导航顺序、时间轴写入策略和概览摘要规则启停。
+批量保存功能块实例配置。该接口使用 upsert 语义：同一项目下 `blockKey` 已存在则更新，不存在则插入。
 
-`PATCH /api/life/projects/{projectId}/ability-configs`
+请求体：
 
-批量保存功能块实例配置。项目管理页通常一次调整多个功能块的启停、导航顺序、概览规则和时间轴规则，因此后端需要支持按项目整体保存，避免前端逐条提交后出现中间态。
+```ts
+interface BlockInstanceBatchSaveRequest {
+  projectId: number;
+  blockInstances: BlockInstanceSaveItemRequest[];
+}
+```
 
-## 2. 概览摘要
+### 2.3 能力列表
 
-`GET /api/life/projects/{projectId}/overview-summaries`
+`POST /life/project/capabilities/list`
 
-返回 `OverviewSummary[]`，由 `overview` 功能块中的 `summaryRules` 生成。无限暖暖当前默认摘要包括当前版本、今日目标、本周目标、即将结束活动、素材收集、图册记录、资产风险和最近时间轴。
+返回后端注册的 Life Capability 列表。该列表用于解释功能块背后的能力组合，例如目标系统、活动倒计时、素材收集、媒体记录、账号资产、时间轴回顾、AI 建议等。
 
-概览只负责摘要、跳转和 AI 建议，不直接承担完整数据管理。用户要新增或管理数据，应进入对应 tab。
+### 2.4 概览摘要
 
-## 3. 任务目标
+`POST /life/project/overview-summaries/list`
 
-`GET /api/life/projects/{projectId}/targets`
+返回项目概览摘要。摘要由功能块实例的 `summaryRules` 和后端能力模型共同生成，当前无限暖暖默认覆盖当前版本、今日目标、本周目标、即将结束活动、素材收集、图册记录、资产风险和最近时间轴。
 
-返回 `GameTarget[]`。任务目标覆盖日常、周常、版本活动目标和用户自定义目标。
+概览只负责摘要、跳转和 AI 建议，不直接承担完整数据管理。用户要新增或管理数据，应进入对应 tab 或项目管理页。
+
+### 2.5 任务目标
+
+`POST /life/project/targets/list`
+
+返回项目下所有任务目标，覆盖日常、周常、版本活动目标和用户自定义目标。
 
 关键字段：
 
@@ -66,143 +116,135 @@ interface ApiResponse<T> {
 | --- | --- |
 | `type` | `daily`、`weekly`、`activity`、`custom` |
 | `status` | `todo`、`done`、`skipped`、`expired`、`archived` |
-| `progressCurrent/progressTarget` | 进度型目标 |
-| `versionId/activityId` | 版本活动目标的归属 |
+| `progressCurrent` / `progressTarget` | 进度型目标 |
+| `versionId` / `activityId` | 版本活动目标的归属 |
 | `resetRule` | 重置规则 |
 | `pinnedToOverview` | 是否进入概览候选 |
 | `timelineRule` | 完成、跳过、过期等动作如何写入时间轴 |
 
-`POST /api/life/projects/{projectId}/targets`
+`POST /life/project/targets/status`
 
-新增目标。活动目标应带 `activityId`，后端需同步维护活动的 `targetIds`。
+更新目标状态。
 
-`PATCH /api/life/projects/{projectId}/targets/{targetId}`
+请求体：
 
-编辑目标基础信息，例如标题、说明、类型、进度目标、归属版本、归属活动、是否置顶到概览和时间轴写入规则。
+```json
+{
+  "projectId": 1001,
+  "targetId": 1,
+  "status": "done"
+}
+```
 
-`PATCH /api/life/projects/{projectId}/targets/{targetId}/status`
+`POST /life/project/targets/progress`
 
-更新目标状态。完成、跳过、过期、归档动作需要按 `timelineRule` 生成时间轴事件。
+更新目标当前进度。
 
-`PATCH /api/life/projects/{projectId}/targets/{targetId}/progress`
+请求体：
 
-更新目标进度。达到目标值时可自动变为 `done`。
+```json
+{
+  "projectId": 1001,
+  "targetId": 1,
+  "current": 3
+}
+```
 
-`DELETE /api/life/projects/{projectId}/targets/{targetId}`
+### 2.6 版本与活动
 
-删除目标。第一阶段可直接删除 mock 数据；真实后端建议保留审计记录，并在删除活动目标时同步维护活动的 `targetIds`。
+`POST /life/project/game-versions/list`
 
-## 4. 版本与活动
+返回游戏版本列表。
 
-`GET /api/life/projects/{projectId}/game-versions`
+`POST /life/project/game-versions/current`
 
-返回 `GameVersion[]`。版本状态为 `upcoming`、`active`、`ending`、`ended`、`archived`。
+返回当前版本。当前后端使用 `status = active` 判断当前版本。
 
-`GET /api/life/projects/{projectId}/game-activities`
+`POST /life/project/game-activities/list`
 
-返回 `GameActivity[]`。活动状态为 `upcoming`、`active`、`ending`、`ended`、`pending_archive`、`archived`。
+返回版本活动列表。
 
-`POST /api/life/projects/{projectId}/game-versions`
+### 2.7 时间轴
 
-新增版本。
+`POST /life/project/timeline-events/list`
 
-`POST /api/life/projects/{projectId}/game-activities`
-
-新增版本活动。
-
-`PATCH /api/life/projects/{projectId}/game-activities/{activityId}/reminder`
-
-启停活动提醒。
-
-`POST /api/life/projects/{projectId}/game-activities/{activityId}/archive`
-
-归档活动，并生成 `activity_archived` 时间轴事件。归档摘要应包含关联目标、截图、笔记、素材。
-
-`POST /api/life/projects/{projectId}/game-versions/{versionId}/archive`
-
-归档版本，并生成 `version_archived` 时间轴事件。版本归档会同步归档版本下活动和目标。
-
-## 5. 时间轴
-
-`GET /api/life/projects/{projectId}/timeline-events`
-
-返回 `TimelineEvent[]`。时间轴是长期项目回顾的主数据，不只是动态列表。
+返回项目时间轴事件，按发生时间倒序展示。时间轴是长期项目回顾的主数据，不只是动态列表。
 
 关键字段：
 
 | 字段 | 说明 |
 | --- | --- |
-| `type` | `target_done`、`target_skipped`、`target_expired`、`activity_started`、`activity_archived`、`version_archived`、`material_completed`、`photo_uploaded`、`note_created`、`ai_summary_generated` |
+| `type` | 事件类型，如目标完成、活动开始、素材完成、照片上传、AI 总结生成 |
 | `sourceBlockKey` | 来源功能块 |
-| `versionId/activityId/targetId` | 可选关联 |
+| `versionId` / `activityId` / `targetId` | 可选关联 |
 | `displayInOverview` | 是否进入概览摘要 |
 | `aiReadable` | 是否允许 AI 读取 |
 | `sensitivity` | 普通或私密 |
 
-`POST /api/life/projects/{projectId}/timeline-events`
+### 2.8 素材、笔记、图册与资产
 
-新增时间轴记录。页面需支持按天、按周、按版本查看。
+`POST /life/project/materials/overview`
 
-## 6. 素材、笔记、图册与资产
+返回素材、套装、代币和收集项概览。
 
-`GET /api/life/projects/{projectId}/materials`
+`POST /life/project/notes/overview`
 
-返回素材/套装/代币/收集项概览。素材能力默认不一定显示为 tab，但会进入概览摘要、活动归档和 AI 复盘。
+返回笔记概览。
 
-`GET /api/life/projects/{projectId}/notes`
+`POST /life/project/notes/detail`
 
-返回 `NikkiNote[]`。笔记攻略第一阶段不作为独立 tab，但需要有数据模型和接口，可关联 `versionId`、`activityId`、`targetId`，并按配置写入时间轴。
+请求体：
 
-`POST /api/life/projects/{projectId}/notes`
+```json
+{
+  "projectId": 1001,
+  "noteId": 1
+}
+```
 
-新增笔记、攻略或复盘。新增后可按 `timelineRule` 生成 `note_created` 时间轴事件。
+返回单条笔记详情，并校验笔记是否属于当前项目。
 
-`PATCH /api/life/projects/{projectId}/notes/{noteId}`
+`POST /life/project/gallery/overview`
 
-编辑笔记标题、内容、类型、归属版本、归属活动、归属目标和概览置顶规则。
+返回图册和最近照片。
 
-`GET /api/life/projects/{projectId}/gallery`
+`POST /life/project/assets/overview`
 
-返回图册和照片。照片应支持 `versionId`、`activityId`、`targetId` 关联，并可按图册配置写入时间轴。
+返回账号资产概览。敏感资产后续需要继续补查看确认、加密和权限控制。
 
-`POST /api/life/projects/{projectId}/gallery/photos`
+`POST /life/project/assets/detail`
 
-新增照片。
+请求体：
 
-`PATCH /api/life/projects/{projectId}/gallery/photos/{photoId}`
+```json
+{
+  "projectId": 1001,
+  "assetId": 1
+}
+```
 
-编辑照片说明、所属图册、图片地址、关联版本、关联活动和关联目标。
+返回单条资产详情，并校验资产是否属于当前项目。
 
-`DELETE /api/life/projects/{projectId}/gallery/photos/{photoId}`
+### 2.9 AI 建议
 
-删除照片。真实后端需要区分删除业务记录和删除 OSS 文件，默认不应直接清理原始文件。
+`POST /life/project/ai/overview`
 
-`GET /api/life/projects/{projectId}/assets`
+返回基于目标、活动、素材、时间轴生成的 AI 建议摘要。当前 AI 仍是占位实现，但接口形态已固定。
 
-返回账号资产。资产状态包括 `protected`、`bound`、`pending`、`expired`、`archived`。
+`POST /life/project/ai/summaries/refresh`
 
-`POST /api/life/projects/{projectId}/assets`
+刷新 AI 建议摘要。后续接入真实大模型后，该接口应只生成候选建议，不应无确认写入关键资料。
 
-新增资产。
+## 3. 后续待扩展
 
-`PATCH /api/life/projects/{projectId}/assets/{assetId}`
+当前 `fml-service` 已覆盖无限暖暖页面的主要读取和少量写入能力，但以下接口仍属于后续扩展范围：
 
-编辑资产名称、类型、状态、摘要、关联链接和备注。敏感字段后续应独立加密和授权查看。
+- 新增、编辑、删除任务目标。
+- 新增版本和版本活动。
+- 活动提醒启停和活动归档。
+- 手动新增时间轴事件。
+- 新增、编辑、删除素材、笔记、照片和资产。
+- OSS 文件上传、图片归档和敏感资产加密。
+- 真实 AI 总结、待确认收件箱和外部通知。
 
-`PATCH /api/life/projects/{projectId}/assets/{assetId}/status`
-
-更新资产状态。敏感资产内容后续需要增加查看确认和权限控制。
-
-`DELETE /api/life/projects/{projectId}/assets/{assetId}`
-
-删除资产。真实后端建议默认软删除，避免误删账号、兑换码、支付凭证等重要资料。
-
-## 7. AI 建议
-
-`GET /api/life/projects/{projectId}/ai/overview`
-
-返回基于目标、活动、素材、时间轴生成的 AI 建议。AI 不作为独立 tab，而是作为概览建议、时间轴摘要和项目管理自动化配置出现。
-
-`POST /api/life/projects/{projectId}/ai/summaries`
-
-生成 AI 总结。用户确认后写入 `ai_summary_generated` 时间轴事件。
+扩展这些接口时仍保持当前原则：`POST + JSON body`、`projectId` 放请求体、Controller 返回 VO，不直接暴露持久化 Entity。

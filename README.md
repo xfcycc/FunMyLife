@@ -138,7 +138,8 @@ Life Manager 当前使用这套概念组织产品：
 ```text
 FunMyLife
 ├── admin-web/                  # 前端应用与 Life Manager 页面
-├── admin-service/              # 后端服务与业务模块
+├── fml-service/                 # Life Manager 轻量后端服务
+├── admin-service/               # RuoYi-Vue-Plus 后台底座与历史服务
 ├── docs/                       # 产品文档、协议和 UI 图
 └── README.md
 ```
@@ -152,10 +153,16 @@ admin-web/src/constants/life-manager/
 admin-web/src/styles/css/life-high-fidelity.css
 ```
 
-后端 Life Manager 相关模块正在沉淀到：
+后端 Life Manager 相关代码已经独立到：
 
 ```text
-admin-service/ruoyi-modules/ruoyi-life/
+fml-service/src/main/java/com/funmylife/fml/
+fml-service/src/main/resources/application.yml
+```
+
+初始化 SQL 目前仍复用历史脚本：
+
+```text
 admin-service/script/sql/lm_life.sql
 ```
 
@@ -163,28 +170,28 @@ admin-service/script/sql/lm_life.sql
 
 基础环境：JDK 21、Maven、Node.js 20.19+、pnpm 10.5+、Docker。
 
-启动后端依赖：
+启动数据库依赖：
 
 ```bash
 cd admin-service/script/docker
-docker compose up -d mysql redis minio ruoyi-snailjob-server ruoyi-monitor-admin
+docker compose up -d mysql
 ```
 
-当前本地配置需要注意：`application-dev.yml` 默认连接 `fml/root/123456`，而 docker-compose 里的 MySQL 默认创建 `ry-vue/root/root`。启动前需要把本地数据库名和密码对齐，再导入初始化 SQL。
+`fml-service` 默认连接 `localhost:3306/fml`，数据库账号密码通过 `FML_DB_USERNAME`、`FML_DB_PASSWORD` 覆盖；本地默认值是 `root/123456`。启动前需要创建 `fml` 数据库并导入 Life Manager 初始化 SQL。
 
 ```bash
 mysql -uroot -p -e "create database if not exists fml default character set utf8mb4 collate utf8mb4_general_ci;"
-mysql -uroot -p fml < admin-service/script/sql/ry_vue_5.X.sql
-mysql -uroot -p fml < admin-service/script/sql/ry_job.sql
 mysql -uroot -p fml < admin-service/script/sql/lm_life.sql
 ```
 
-启动后端：
+启动 Life Manager 后端：
 
 ```bash
-cd admin-service
-mvn -pl ruoyi-admin -am spring-boot:run -Pdev
+cd fml-service
+mvn spring-boot:run
 ```
+
+后端默认端口是 `8082`，接口统一使用 `POST + JSON body`，例如 `/life/project/detail`。
 
 启动前端：
 
@@ -194,9 +201,17 @@ pnpm install
 pnpm dev
 ```
 
-前端常见访问地址是 `http://localhost:9527`。如果后端跑在默认 `8080`，但本地存在 `admin-web/.env.dev.local` 并指向 `18080`，需要同步调整接口地址。
+前端常见访问地址是 `http://localhost:9527`。本地联调 `fml-service` 时，建议在 `admin-web/.env.dev.local` 中设置：
 
-初始化账号：
+```env
+VITE_SERVICE_BASE_URL=http://localhost:8082
+```
+
+如果该文件仍指向远程服务或旧后台端口，需要先改回当前要联调的后端地址。
+
+历史后台账号：
+
+以下账号仅适用于后续需要启动 `admin-service` 管理后台的场景；`fml-service` 当前不包含登录和权限模块。
 
 | 账号 | 密码 | 说明 |
 | --- | --- | --- |
@@ -206,9 +221,9 @@ pnpm dev
 
 ## 技术底座
 
-FunMyLife 继承了 RuoYi-Vue-Plus 的后端管理能力和 RuoYi-Plus-Soybean / Soybean Admin 的前端工程体系。
+FunMyLife 前端继承了 RuoYi-Plus-Soybean / Soybean Admin 的工程体系；Life Manager 后端已经从 RuoYi-Vue-Plus 后台服务中拆出，当前以 `fml-service` 作为独立轻量服务推进。
 
-前端使用 Vue 3、TypeScript、Vite、Naive UI、Pinia、UnoCSS 和 pnpm workspace。后端使用 Spring Boot 3、JDK 21、Sa-Token、MyBatis-Plus、MySQL、Redis、Redisson、MinIO、SnailJob 和 Maven 多模块工程。
+前端使用 Vue 3、TypeScript、Vite、Naive UI、Pinia、UnoCSS 和 pnpm workspace。`fml-service` 使用 Spring Boot 3、JDK 21、MyBatis-Plus、MySQL、Lombok 和 Maven；`admin-service` 仍保留 RuoYi-Vue-Plus 的系统管理、OSS、SSE、任务调度等历史能力，后续按需要再接入或隐藏。
 
 参考项目：
 
