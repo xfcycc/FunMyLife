@@ -18,12 +18,6 @@ export function createRouteGuard(router: Router) {
     }
 
     const rootRoute: RouteKey = 'root';
-    const loginRoute: RouteKey = 'login';
-
-    // FML 当前作为本地生活管理应用使用，不再展示登录页；访问 /login 时直接回到根路由。
-    if (to.name === loginRoute) {
-      return { name: rootRoute };
-    }
 
     // Life Manager 页面已经作为 constant route 注册，直接放行，不初始化后台用户与菜单。
     if (to.meta.constant) {

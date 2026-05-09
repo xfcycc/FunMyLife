@@ -1,8 +1,29 @@
-export * from './menu';
-export * from './dict';
-export * from './dict-data';
-export * from './user';
-export * from './dept';
-export * from './role';
-export * from './post';
-export * from './social';
+const emptyResult = { data: [] as any[], error: null };
+
+export async function fetchGetDeptTree() {
+  return emptyResult;
+}
+
+export async function fetchGetMenuList() {
+  return emptyResult;
+}
+
+export async function fetchGetMenuTreeSelect() {
+  return emptyResult;
+}
+
+export async function fetchGetPostSelect(_deptId?: CommonType.IdType) {
+  return emptyResult;
+}
+
+export async function fetchGetRoleSelect() {
+  return emptyResult;
+}
+
+export async function fetchGetUserSelect() {
+  return emptyResult;
+}
+
+export async function fetchGetDictDataByType(_dictType: string) {
+  return emptyResult;
+}

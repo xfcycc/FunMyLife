@@ -146,18 +146,7 @@ const fmlConstantRoutes = [
       hideInMenu: true
     }
   },
-  {
-    name: 'login',
-    path: '/login/:module(pwd-login|code-login|register|reset-pwd|bind-wechat)?',
-    component: 'layout.blank$view.login',
-    props: true,
-    meta: {
-      title: 'login',
-      i18nKey: 'route.login',
-      constant: true,
-      hideInMenu: true
-    }
-  },
+
   {
     name: 'iframe-page',
     path: '/iframe-page/:url',
@@ -172,29 +161,7 @@ const fmlConstantRoutes = [
       icon: 'material-symbols:iframe-outline'
     }
   },
-  {
-    name: 'social-callback',
-    path: '/social-callback',
-    component: 'layout.blank$view.social-callback',
-    meta: {
-      title: 'social-callback',
-      i18nKey: 'route.social-callback',
-      constant: true,
-      hideInMenu: true,
-      icon: 'simple-icons:authy'
-    }
-  },
-  {
-    name: 'user-center',
-    path: '/user-center',
-    component: 'layout.base$view.user-center',
-    meta: {
-      title: 'user-center',
-      i18nKey: 'route.user-center',
-      icon: 'material-symbols:account-circle-full',
-      hideInMenu: true
-    }
-  }
+
 ] as unknown as ElegantRoute[];
 
 /** 创建 FML 独立前端需要注册的常量路由 */

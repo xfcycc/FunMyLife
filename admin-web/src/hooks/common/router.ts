@@ -54,27 +54,10 @@ export function useRouterPush(inSetup = true) {
   }
 
   /**
-   * Navigate to login page
-   *
-   * @param loginModule The login module
-   * @param redirectUrl The redirect url, if not specified, it will be the current route fullPath
+   * FML 精简版不再保留登录页，历史调用统一回到首页。
    */
-  async function toLogin(loginModule?: UnionKey.LoginModule, redirectUrl?: string) {
-    const module = loginModule || 'pwd-login';
-
-    const options: App.Global.RouterPushOptions = {
-      params: {
-        module
-      }
-    };
-
-    const redirect = redirectUrl || route.value.fullPath;
-
-    options.query = {
-      redirect
-    };
-
-    return routerPushByKey('login', options);
+  async function toLogin(_loginModule?: UnionKey.LoginModule, _redirectUrl?: string) {
+    return toHome();
   }
 
   /**
@@ -83,9 +66,7 @@ export function useRouterPush(inSetup = true) {
    * @param module
    */
   async function toggleLoginModule(module: UnionKey.LoginModule) {
-    const query = route.value.query as Record<string, string>;
-
-    return routerPushByKey('login', { query, params: { module } });
+    return toLogin(module);
   }
 
   /**
