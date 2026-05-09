@@ -47,7 +47,7 @@ export FML_DB_PASSWORD=123456
 
 ```bash
 mysql -uroot -p -e "create database if not exists fml default character set utf8mb4 collate utf8mb4_general_ci;"
-mysql -uroot -p fml < ../admin-service/script/sql/lm_life.sql
+mysql -uroot -p fml < src/main/resources/db/schema/lm_life.sql
 ```
 
 启动服务：

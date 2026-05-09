@@ -25,7 +25,7 @@ import java.util.function.Supplier;
 public class MybatisLifeDataRepository implements LifeDataRepository {
 
     private final LmProjectMapper projectMapper;
-    private final LmAbilityConfigMapper abilityConfigMapper;
+    private final LmBlockInstanceConfigMapper blockInstanceConfigMapper;
     private final LmGameVersionMapper gameVersionMapper;
     private final LmGameActivityMapper gameActivityMapper;
     private final LmGameTargetMapper gameTargetMapper;
@@ -45,12 +45,12 @@ public class MybatisLifeDataRepository implements LifeDataRepository {
         return copy(projectMapper.selectOne(lqw), LmProject::new);
     }
 
-    /** 查询项目下全部功能块实例，并把旧表配置转换为新的 BlockInstance 领域对象。 */
+    /** 查询项目下全部功能块实例，并把表配置转换为 BlockInstance 领域对象。 */
     @Override
     public List<BlockInstance> findBlockInstances(Long projectId) {
-        var lqw = Wrappers.lambdaQuery(com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig.class);
-        lqw.eq(com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig::getProjectId, projectId);
-        return copyList(abilityConfigMapper.selectList(lqw), LmAbilityConfig::new)
+        var lqw = Wrappers.lambdaQuery(com.funmylife.fml.infrastructure.persistence.entity.LmBlockInstanceConfig.class);
+        lqw.eq(com.funmylife.fml.infrastructure.persistence.entity.LmBlockInstanceConfig::getProjectId, projectId);
+        return copyList(blockInstanceConfigMapper.selectList(lqw), LmBlockInstanceConfig::new)
             .stream()
             .map(blockInstanceJsonConverter::toBlockInstance)
             .toList();
@@ -59,27 +59,27 @@ public class MybatisLifeDataRepository implements LifeDataRepository {
     /** 查询一个功能块实例，blockKey 对应 overview、targets、gallery 等项目内入口。 */
     @Override
     public BlockInstance findBlockInstance(Long projectId, String blockKey) {
-        var lqw = Wrappers.lambdaQuery(com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig.class);
-        lqw.eq(com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig::getProjectId, projectId);
-        lqw.eq(com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig::getBlockKey, blockKey);
-        LmAbilityConfig config = copy(abilityConfigMapper.selectOne(lqw), LmAbilityConfig::new);
+        var lqw = Wrappers.lambdaQuery(com.funmylife.fml.infrastructure.persistence.entity.LmBlockInstanceConfig.class);
+        lqw.eq(com.funmylife.fml.infrastructure.persistence.entity.LmBlockInstanceConfig::getProjectId, projectId);
+        lqw.eq(com.funmylife.fml.infrastructure.persistence.entity.LmBlockInstanceConfig::getBlockKey, blockKey);
+        LmBlockInstanceConfig config = copy(blockInstanceConfigMapper.selectOne(lqw), LmBlockInstanceConfig::new);
         return blockInstanceJsonConverter.toBlockInstance(config);
     }
 
-    /** 插入功能块实例前，把领域模型转换为当前兼容的 lm_ability_config 表实体。 */
+    /** 插入功能块实例前，把领域模型转换为 lm_block_instance_config 表实体。 */
     @Override
     public void insertBlockInstance(BlockInstance blockInstance) {
-        LmAbilityConfig config = blockInstanceJsonConverter.toAbilityConfig(blockInstance);
-        var entity = copy(config, com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig::new);
-        abilityConfigMapper.insert(entity);
+        LmBlockInstanceConfig config = blockInstanceJsonConverter.toBlockInstanceConfig(blockInstance);
+        var entity = copy(config, com.funmylife.fml.infrastructure.persistence.entity.LmBlockInstanceConfig::new);
+        blockInstanceConfigMapper.insert(entity);
     }
 
-    /** 更新功能块实例前，把领域模型转换为当前兼容的 lm_ability_config 表实体。 */
+    /** 更新功能块实例前，把领域模型转换为 lm_block_instance_config 表实体。 */
     @Override
     public void updateBlockInstance(BlockInstance blockInstance) {
-        LmAbilityConfig config = blockInstanceJsonConverter.toAbilityConfig(blockInstance);
-        var entity = copy(config, com.funmylife.fml.infrastructure.persistence.entity.LmAbilityConfig::new);
-        abilityConfigMapper.updateById(entity);
+        LmBlockInstanceConfig config = blockInstanceJsonConverter.toBlockInstanceConfig(blockInstance);
+        var entity = copy(config, com.funmylife.fml.infrastructure.persistence.entity.LmBlockInstanceConfig::new);
+        blockInstanceConfigMapper.updateById(entity);
     }
 
     /** 查询所有版本，不在仓储层做 UI 适配。 */

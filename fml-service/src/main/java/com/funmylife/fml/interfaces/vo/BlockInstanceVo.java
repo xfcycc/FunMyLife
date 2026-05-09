@@ -13,7 +13,7 @@ import java.util.Date;
 @Data
 public class BlockInstanceVo {
 
-    /** 功能块实例 ID；当前阶段来自 lm_ability_config.config_id。 */
+    /** 功能块实例 ID；来自 lm_block_instance_config.config_id。 */
     private Long blockInstanceId;
 
     /** 所属项目 ID。 */

@@ -13,13 +13,12 @@ import java.util.List;
  * <p>功能块实例表示某个项目中实际启用和配置的功能入口，例如无限暖暖项目里的
  * “任务”“图册”“账号资产”。它不是能力本身，而是能力在项目内的组合和呈现方式。</p>
  *
- * <p>当前版本仍从 lm_ability_config 表读取数据，但领域语义已经调整为 BlockInstance。
- * 后续如物理表重命名为 lm_block_instance_config，本对象不需要改变对外语义。</p>
+ * <p>当前版本从 lm_block_instance_config 表读取数据，领域语义为 BlockInstance。</p>
  */
 @Data
 public class BlockInstance {
 
-    /** 功能块实例 ID；当前阶段对应 lm_ability_config.config_id。 */
+    /** 功能块实例 ID；对应 lm_block_instance_config.config_id。 */
     private Long blockInstanceId;
 
     /** 所属项目 ID。 */

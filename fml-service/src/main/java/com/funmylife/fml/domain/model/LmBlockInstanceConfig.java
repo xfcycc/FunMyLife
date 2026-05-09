@@ -1,7 +1,5 @@
-package com.funmylife.fml.infrastructure.persistence.entity;
+package com.funmylife.fml.domain.model;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.util.Date;
@@ -12,11 +10,9 @@ import java.util.Date;
  * 唯一约束：uk_project_block(project_id, block_key)
  */
 @Data
-@TableName("lm_ability_config")
-public class LmAbilityConfig {
+public class LmBlockInstanceConfig {
 
     /** 配置 ID（雪花算法生成） */
-    @TableId(value = "config_id")
     private Long configId;
 
     /** 所属项目 ID */
@@ -31,7 +27,7 @@ public class LmAbilityConfig {
     /** 是否启用：1=启用 0=禁用 */
     private String enabled;
 
-    /** 能力配置，JSON */
+    /** 当前功能块实例引用的能力列表，JSON */
     private String capabilities;
 
     /** 导航配置，JSON：{visible, order} */

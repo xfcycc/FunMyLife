@@ -158,12 +158,13 @@ admin-web/src/styles/css/life-high-fidelity.css
 ```text
 fml-service/src/main/java/com/funmylife/fml/
 fml-service/src/main/resources/application.yml
+fml-service/src/main/resources/db/schema/lm_life.sql
 ```
 
-初始化 SQL 目前仍复用历史脚本：
+Life Manager 表结构以 `fml-service` 下的 SQL 为唯一事实源：
 
 ```text
-admin-service/script/sql/lm_life.sql
+fml-service/src/main/resources/db/schema/lm_life.sql
 ```
 
 ## 本地运行
@@ -181,7 +182,7 @@ docker compose up -d mysql
 
 ```bash
 mysql -uroot -p -e "create database if not exists fml default character set utf8mb4 collate utf8mb4_general_ci;"
-mysql -uroot -p fml < admin-service/script/sql/lm_life.sql
+mysql -uroot -p fml < fml-service/src/main/resources/db/schema/lm_life.sql
 ```
 
 启动 Life Manager 后端：

@@ -15,7 +15,7 @@ import java.util.List;
  * 功能块实例应用服务。
  *
  * <p>该服务是管理页读取和保存功能块实例配置的用例入口。它使用 BlockInstance 领域对象，
- * 不再让 application 层直接围绕 LmAbilityConfig 旧表语义编排业务。</p>
+ * 不让 application 层直接依赖持久化表语义编排业务。</p>
  */
 @Service
 @RequiredArgsConstructor

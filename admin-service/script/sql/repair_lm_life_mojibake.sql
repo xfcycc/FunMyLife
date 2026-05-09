@@ -3,6 +3,9 @@ SET NAMES utf8mb4;
 -- ----------------------------
 -- Life Manager 乱码修复脚本
 -- ----------------------------
+-- 注意：Life Manager 表结构现在以 fml-service/src/main/resources/db/schema/lm_life.sql 为唯一事实源。
+-- 本文件仅保留为历史数据库乱码修复工具，不再承载建表结构。
+--
 -- 适用场景：
 -- 1. lm_life.sql 的 UTF-8 中文内容曾在 latin1 会话下导入 MySQL。
 -- 2. 查询时看到类似 "å®Œæˆæ¯æ—¥ä»»åŠ¡" 的 mojibake 乱码。

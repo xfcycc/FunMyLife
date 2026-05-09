@@ -5,7 +5,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.funmylife.fml.domain.block.*;
 import com.funmylife.fml.domain.capability.CapabilityKey;
-import com.funmylife.fml.domain.model.LmAbilityConfig;
+import com.funmylife.fml.domain.model.LmBlockInstanceConfig;
 import com.funmylife.fml.domain.rule.*;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * 功能块实例 JSON 转换器。
  *
- * <p>当前数据库仍使用 lm_ability_config 保存功能块实例配置，其中 capabilities、navigation、
+ * <p>当前数据库使用 lm_block_instance_config 保存功能块实例配置，其中 capabilities、navigation、
  * summaryRules、timeline、aiRules、security 等字段都是 JSON 字符串。该转换器负责把这些
  * 持久化字段转换为明确的领域对象，避免 application 层继续直接处理 JSONObject。</p>
  *
@@ -26,12 +26,12 @@ import java.util.List;
 public class BlockInstanceJsonConverter {
 
     /**
-     * 把旧的 LmAbilityConfig 领域模型转换为新的 BlockInstance 领域对象。
+     * 把 LmBlockInstanceConfig 领域模型转换为 BlockInstance 领域对象。
      *
-     * @param config 从 lm_ability_config 表读取出的配置模型
+     * @param config 从 lm_block_instance_config 表读取出的配置模型
      * @return 功能块实例；入参为空时返回 null
      */
-    public BlockInstance toBlockInstance(LmAbilityConfig config) {
+    public BlockInstance toBlockInstance(LmBlockInstanceConfig config) {
         if (config == null) {
             return null;
         }
@@ -64,18 +64,18 @@ public class BlockInstanceJsonConverter {
     }
 
     /**
-     * 把新的 BlockInstance 领域对象转换回当前持久化模型。
+     * 把 BlockInstance 领域对象转换回功能块实例配置持久化模型。
      *
      * @param block 功能块实例领域对象
-     * @return 兼容现有 Mapper 的持久化领域模型
+     * @return 功能块实例配置持久化领域模型
      */
-    public LmAbilityConfig toAbilityConfig(BlockInstance block) {
+    public LmBlockInstanceConfig toBlockInstanceConfig(BlockInstance block) {
         if (block == null) {
             return null;
         }
         validateRawJson(block);
 
-        LmAbilityConfig config = new LmAbilityConfig();
+        LmBlockInstanceConfig config = new LmBlockInstanceConfig();
         config.setConfigId(block.getBlockInstanceId());
         config.setProjectId(block.getProjectId());
         config.setBlockKey(block.getBlockKey() == null ? null : block.getBlockKey().asString());
